@@ -1,6 +1,28 @@
 # BLE-Scanner
 Open-source ESP32 privacy-awareness detectors for smart glasses, BLE cameras, microphones and recording devices, with portable and facility-focused builds.
+
 Disclaimer- SOME AI WAS USED IN THE BUILDING OF THESE DEVICES
+
+This project is dedicated to my sister, mother, E.M, her sister M.M and C.C
+I credit these projects for inspiration:
+surveillancewatch/ESP-GlassHole — ESP32 BLE smart-glasses detector
+sh4d0wm45k/glass-detect — smart-glasses detection
+colonelpanichacks/flock-you — ESP32 surveillance-infrastructure detection project
+yjeanrenaud/yj_nearbyglasses — Nearby Glasses project
+NullPxl/banrays — smart-glasses / anti-recording awareness 
+colonelpanichacks/ouispy-detector — OUI/BLE-oriented detector 
+LuxStatera/flock-hunter-cyd-wifi — CYD/Wi-Fi detector 
+haxorthematrix/BLEPTD — BLE detection/scanning 
+RamboRogers/esp32-bluetooth-scanner — general ESP32 Bluetooth scanner 
+
+I used these databases for development and research:
+Nordic Semiconductor
+Bluetooth SIG
+IEEE
+Spectacle
+BLE-Payloads
+Fingerbank
+Sparrow
 
 **This project is likely to go mostly unsupported in the future, please read carefully.**
 
