@@ -144,6 +144,177 @@ Examples include:
 
 - Other commercially available BLE-enabled camera/audio equipment
 
+   # Target BLE Devices
+
+
+> **Important:** A detected BLE device is not automatically malicious, illegal, or being used improperly. Detection means that the device matched one or more identifiers, signatures, keywords, or behavioural rules used by the project.
+
+## Primary Target Categories
+
+### Smart Glasses and Camera Glasses
+
+The detector is primarily focused on smart glasses and camera-equipped eyewear, including:
+
+- Ray-Ban Meta smart glasses
+- Oakley Meta smart glasses
+- Kmart / Anko camera glasses
+- HeyCyan smart glasses
+- Rokid AI glasses
+- RayNeo smart glasses
+- VITURE smart glasses and accessories
+- Huawei AI glasses
+- Generic AI glasses
+- Generic camera glasses
+- Other BLE-advertising smart glasses
+- Unknown devices matching known smart-glasses BLE signatures
+
+### Expanded Smart-Glasses Target List
+
+The project database may also include rules or signatures relating to:
+
+- Meta Glasses Adventurer
+- Meta Glasses Fury
+- Meta Starfire Kylie Edition
+- VITURE Helix
+- Acer GI0
+- Willit AI Glasses
+- RayNeo V4
+- Samsung × Warby Parker × Google
+- Samsung × Gentle Monster × Google
+- B by Lenskart
+- Moonix Pro
+- Huawei AI Glasses
+- Ray-Ban Meta Optics Blayzer
+- Ray-Ban Meta Optics Scriber
+- Rokid AI Glasses Style
+- Alibaba Quark AI Glasses G1
+- DPVR G5
+- DPVR G1
+
+> Some products may be represented by database rules before sufficient real-world BLE captures are available. A listed product should not be interpreted as a guarantee that every revision of that product can currently be identified.
+
+## Wireless Microphones
+
+The project also looks for BLE evidence associated with wireless microphone and audio-recording equipment, including:
+
+- RØDE wireless microphone systems
+- DJI Mic systems
+- Hollyland wireless microphones
+- Sennheiser wireless microphone equipment
+- Generic wireless microphones
+- Bluetooth microphones
+- Wireless lavalier microphone systems
+- Wireless audio transmitters
+- Wireless audio receivers
+
+Relevant advertised-name clues may include terms such as:
+
+- `Wireless Mic`
+- `Bluetooth Mic`
+- `MIC-`
+
+Keyword matches alone should not normally be treated as definitive device identification.
+
+## Cameras and Recording Devices
+
+Where detectable through BLE, the project may identify or score:
+
+- Bluetooth-enabled cameras
+- Wearable cameras
+- Portable cameras
+- Camera-control devices
+- Action cameras
+- Camera remotes
+- Unknown BLE devices matching known camera-related signatures
+
+## Audio Recording Devices
+
+The project may also identify BLE evidence relating to:
+
+- Bluetooth-capable audio recorders
+- Portable recording equipment
+- Wireless recording accessories
+- Audio transmitters
+- Audio receivers
+- Unknown devices matching known microphone or audio signatures
+
+## Detection Evidence
+
+Depending on the firmware version and hardware configuration, classification can use combinations of:
+
+- Advertised BLE device name
+- Bluetooth Company ID
+- Manufacturer-specific data
+- Service UUIDs
+- Known BLE payload signatures
+- High-confidence keywords
+- Known-device database matches
+- Device and manufacturer annotations
+- RSSI / proximity information
+- Hard-coded detection rules
+- External database-coprocessor results
+
+No single field should be assumed to provide perfect identification.
+
+## Background BLE Devices
+
+Common BLE devices are expected to appear during normal operation and are generally treated as background traffic unless stronger evidence is present.
+
+Examples include:
+
+- Smartphones
+- Tablets
+- Smartwatches
+- Fitness trackers
+- Earbuds
+- Headphones
+- Bluetooth speakers
+- Keyboards
+- Mice
+- TVs
+- Vehicles
+- Game controllers
+- Smart-home sensors
+- Retail beacons
+- Medical wearables
+- Generic unnamed BLE devices
+
+The presence of one of these devices should not, by itself, produce a high-confidence privacy alert.
+
+## Classification Principle
+
+The project is intended to favour multiple supporting indicators rather than relying only on a device name.
+
+A simplified evidence hierarchy is:
+
+1. Known device-specific BLE signature
+2. Known manufacturer and product-specific evidence
+3. Manufacturer-data or service-UUID match
+4. Camera, microphone, smart-glasses, or recording-related evidence
+5. Relevant advertised-name keyword
+6. Generic or unknown BLE device
+
+The purpose of this approach is to remain sensitive to relevant devices while reducing false positives from ordinary Bluetooth equipment.
+
+## Detection Limitations
+
+BLE detection has inherent limitations.
+
+A target device may:
+
+- Not advertise continuously
+- Disable Bluetooth
+- Use changing private/random addresses
+- Change firmware or advertisement format
+- Advertise without a readable name
+- Use identifiers shared with unrelated products
+- Be outside practical radio range
+- Be shielded by walls, people, vehicles, or other obstacles
+
+Likewise, a non-target device can occasionally resemble a known target.
+
+For these reasons, project detections should be treated as **indicators requiring context**, not proof that a particular person is recording, tracking, or acting unlawfully.
+
 The project is not designed or represented as a reliable detector for military-grade, intelligence-grade, specialist government, highly specialised covert, or purpose-built professional surveillance equipment.
 
 Such equipment may:
