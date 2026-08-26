@@ -2,6 +2,7 @@
 Open-source ESP32 privacy-awareness detectors for smart glasses, BLE cameras, microphones and recording devices, with portable and facility-focused builds.
 Disclaimer- SOME AI WAS USED IN THIS BUILD ESPECIALLY FOR CUSTOM DATABASE BUILDING.
 
+This project is likely to go mostly unsupported in the future, please read carefully.
 
 
 ESP32 Smart-Glasses, Camera, Microphone & BLE Privacy Detector
