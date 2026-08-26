@@ -1443,6 +1443,16 @@ Before flashing or commissioning CYD Expanded DEV, verify all of the following:
 
 If Step 3 has not been completed, the external antenna is not the selected RF path.
 
+## Antenna Compliance — NSW, Australia
+
+Bluetooth and Wi-Fi radio operation in NSW is regulated primarily by ACMA under Australian Commonwealth law. Higher-gain antennas are not automatically illegal, but the complete transmitter and antenna system must remain within applicable power/EIRP and equipment-compliance limits.
+
+The 8 dBi antenna used with CYD Expanded DEV is intended primarily to improve BLE reception. Do not increase ESP32 transmit power or add RF amplifiers without confirming compliance with current ACMA requirements.
+
+It is currently legal and within class limits
+
+This is general technical information, not legal advice.
+
 ### Important: CYD Expanded Uses Two Firmware Packages
 #### CYD Expanded DEV — 1 of 2
 Flash to:
