@@ -1449,7 +1449,7 @@ Bluetooth and Wi-Fi radio operation in NSW is regulated primarily by ACMA under 
 
 The 8 dBi antenna used with CYD Expanded DEV is intended primarily to improve BLE reception. Do not increase ESP32 transmit power or add RF amplifiers without confirming compliance with current ACMA requirements.
 
-It is currently legal and within class limits
+It is currently legal and within class limits to use an ebay " 8 dbi antenna" with losses from cable length
 
 This is general technical information, not legal advice.
 
