@@ -11,15 +11,15 @@ This project is dedicated to my sister, my mother, E.M., her sister M.M., C.C an
 
 I credit the following projects for inspiration:
 
-- `surveillancewatch/ESP-GlassHole` — ESP32 BLE smart-glasses detector
-- `sh4d0wm45k/glass-detect` — Smart-glasses detection
+- `surveillancewatch/ESP-GlassHole` — ESP32 BLE smart-glasses detector project
+- `sh4d0wm45k/glass-detect` — Smart-glasses detection project
 - `colonelpanichacks/flock-you` — ESP32 surveillance-infrastructure detection project
 - `yjeanrenaud/yj_nearbyglasses` — Nearby Glasses project
-- `NullPxl/banrays` — Smart-glasses / anti-recording awareness
-- `colonelpanichacks/ouispy-detector` — OUI/BLE-oriented detector
-- `LuxStatera/flock-hunter-cyd-wifi` — CYD/Wi-Fi detector
-- `haxorthematrix/BLEPTD` — BLE detection/scanning
-- `RamboRogers/esp32-bluetooth-scanner` — General ESP32 Bluetooth scanner
+- `NullPxl/banrays` — Smart-glasses / anti-recording awareness project
+- `colonelpanichacks/ouispy-detector` — OUI/BLE-oriented detector project
+- `LuxStatera/flock-hunter-cyd-wifi` — CYD/Wi-Fi detector project
+- `haxorthematrix/BLEPTD` — BLE detection/scanning project
+- `RamboRogers/esp32-bluetooth-scanner` — General ESP32 Bluetooth scanner project
 
 ## Database / Reference Sources
 
