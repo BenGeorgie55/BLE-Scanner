@@ -5,7 +5,7 @@ Disclaimer- SOME AI WAS USED IN THE BUILDING OF THESE DEVICES
 
 ## Dedication
 
-This project is dedicated to my sister, my mother, E.M., her sister M.M., C.C and R.H
+This project is dedicated to my sister, my mother, E.M., her sister M.B/M., C.C and R.H
 
 ## Inspiration and Related Projects
 
