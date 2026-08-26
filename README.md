@@ -25,13 +25,13 @@ I credit the following projects for inspiration:
 
 I used the following databases and reference sources during development and research:
 
-- Nordic Semiconductor
-- Bluetooth SIG
-- IEEE
-- Spectacle
-- BLE-Payloads
-- Fingerbank
-- Sparrow
+- Nordic Semiconductor BLE Database
+- Bluetooth SIG BLE database
+- IEEE data
+- Spectacle Database
+- BLE-Payloads lists
+- Fingerbank data
+- Sparrow data
 
 **This project is likely to go mostly unsupported in the future, please read carefully.**
 
@@ -46,65 +46,37 @@ This project is designed to make practical privacy-awareness technology accessib
 The detectors listen for observable Bluetooth Low Energy (BLE) advertisements and compare them against databases containing known, documented, field-derived, reference, and experimental characteristics associated with:
 
 - Smart glasses
-
 - Camera-equipped wearables
-
 - BLE-enabled cameras
-
 - Consumer hidden-camera products
-
 - Microphones
-
 - Wireless microphones
-
 - Recording devices
-
 - Consumer “bug”-type devices
-
 - Other camera/audio-capable BLE equipment
 
 Privacy matters to everyone, but particular consideration has been given to people and environments where privacy, safeguarding, security, or personal safety may be especially important.
 
-Potential authorised users and environments include:
+Potential users and environments include:
 
 - Children
-
 - Parents and families
-
 - Women
-
 - People affected by domestic or family violence
-
 - Childcare centres
-
 - After-school care services
-
 - Schools
-
 - Teachers concerned about privacy or safeguarding
-
 - School IT and technology staff
-
 - School administration
-
 - Healthcare facilities
-
 - Medical administration areas
-
 - Aged-care facilities
-
-- Workplaces
-
 - Offices
-
 - Reception and front-desk areas
-
 - Correctional facilities and prisons
-
 - Secure facilities
-
 - Controlled-access facilities
-
 - Organisations with legitimate privacy or security requirements
 
 Use in schools, healthcare environments, prisons, workplaces, or other controlled facilities should always be authorised and consistent with applicable law, organisational policy, employment requirements, and local procedures.
@@ -127,21 +99,13 @@ This project is primarily designed to identify or flag BLE characteristics assoc
 Examples include:
 
 - Consumer smart glasses
-
 - Camera-equipped wearables
-
 - Consumer BLE cameras
-
 - Hidden-camera products sold through normal retail channels
-
 - Wireless microphones
-
 - Recording devices
-
 - Consumer surveillance products
-
 - Consumer “bug”-type products
-
 - Other commercially available BLE-enabled camera/audio equipment
 
    # Target BLE Devices
@@ -315,28 +279,6 @@ Likewise, a non-target device can occasionally resemble a known target.
 
 For these reasons, project detections should be treated as **indicators requiring context**, not proof that a particular person is recording, tracking, or acting unlawfully.
 
-The project is not designed or represented as a reliable detector for military-grade, intelligence-grade, specialist government, highly specialised covert, or purpose-built professional surveillance equipment.
-
-Such equipment may:
-
-- Use radio systems other than BLE
-
-- Disable BLE completely
-
-- Transmit only under specific conditions
-
-- Use proprietary protocols
-
-- Minimise radio emissions
-
-- Use heavily changing or encrypted radio characteristics
-
-- Use wired communications
-
-- Use Wi-Fi, cellular, proprietary RF, or other technologies
-
-- Be deliberately engineered to resist ordinary consumer detection methods
-
 Accordingly:
 
 This project is intended primarily for awareness of consumer-grade and commercially available BLE devices. It should not be relied upon to detect military-grade, intelligence-grade, specialist covert, or purpose-built advanced surveillance equipment.
@@ -353,27 +295,18 @@ For the portable S3 and WROOM builds, the phone is primarily used as a convenien
 The detector does not require access to:
 
 - Contacts
-
 - Messages
-
 - Photos
-
 - User accounts
-
-- Phone location history
-
+- Phone location history or active location
 - The phone camera
-
 - The phone microphone
-
+  
 It also does not require:
 
 - A companion phone application
-
 - Wi-Fi for current BLE detection
-
 - Cloud processing
-
 - A cloud account
 
 A dedicated detector can remain focused on BLE scanning without depending on a phone application remaining open or receiving unrestricted background execution from the phone operating system.
@@ -390,45 +323,27 @@ BLE was designed to allow devices to exchange relatively small amounts of inform
 This makes BLE particularly useful in products that are:
 
 - Physically small
-
 - Battery powered
-
 - Expected to run for long periods
-
 - Limited in available battery capacity
-
 - Wearable
-
 - Portable
-
 - Sensor based
-
 - Required to send only small amounts of information
 
 Common BLE applications include:
 
 - Wearables
-
 - Smart watches
-
 - Earbuds
-
 - Headphones
-
 - Sensors
-
 - Fitness equipment
-
 - Medical accessories
-
-- Smart-home equipment
-
+- Smarthome equipment
 - Electronic tags
-
 - Smart glasses
-
 - Cameras and accessories
-
 - Wireless audio equipment
 
 BLE is not limited to small devices, but low power consumption is one of the main reasons it is widely used in compact battery-powered electronics.
@@ -438,43 +353,21 @@ Bluetooth Low Energy uses a mechanism called advertising.
 
 Advertising is a fundamental part of BLE discovery and connectionless communication.
 
-A BLE device that wants to announce its presence or make itself available for discovery can transmit short advertising packets without first establishing a connection.
+A BLE device that wants to announce its presence or make itself available for discovery can transmit short advertising packets without first establishing a connection. 
+*Most devices do this constantly every 5-10 seconds*
 
 Another BLE receiver can therefore hear those advertisements without:
 
 - Pairing
-
 - Connecting
-
 - Authenticating
-
 - Accessing the device
-
 - Opening a GATT connection
-
 - Activating a camera
-
 - Activating a microphone
-
 - Retrieving stored files
 
 Advertising is normal BLE behaviour and is not caused by this detector.
-
-However, not every BLE device advertises continuously.
-
-Products may:
-
-- Advertise only under certain conditions
-
-- Advertise intermittently
-
-- Stop advertising
-
-- Change advertising mode
-
-- Remove identifying fields
-
-- Change payload contents after firmware updates
 
 ## Advertising Timing
 Normal BLE advertising does not necessarily occur every few milliseconds.
@@ -489,37 +382,20 @@ to:
 
 depending on the device and configuration.
 
-Legacy advertising also includes a small pseudo-random delay of up to approximately:
-
-0–10 milliseconds
-
-between advertising events.
-
-This helps reduce repeated radio collisions when many BLE devices share the same 2.4 GHz spectrum.
-
 A manufacturer may choose a shorter interval for fast discovery or a longer interval to reduce power consumption.
 
 ## What Can a BLE Advertisement Contain?
 Depending on the product, BLE advertisements may expose characteristics such as:
 
 - Advertised name
-
 - Bluetooth Company Identifier
-
 - Manufacturer-specific data
-
 - Service UUIDs
-
 - Service data
-
 - Address information
-
 - Address type
-
 - Manufacturer-specific patterns
-
 - Product-specific patterns
-
 - Capability information
 
 The detector compares combinations of these characteristics against its rule and reference databases.
@@ -527,15 +403,10 @@ The detector compares combinations of these characteristics against its rule and
 The detector does not need to:
 
 - Pair with the nearby device
-
 - Connect to it
-
 - Access its operating system
-
 - Retrieve files
-
 - Activate its camera
-
 - Activate its microphone
 
 ## What About Devices That Change or Hide Their BLE Address?
@@ -548,21 +419,13 @@ The detection engines are deliberately designed not to rely exclusively on a per
 They can also examine characteristics such as:
 
 - Advertised name
-
 - Company ID
-
 - Manufacturer data
-
 - Service UUIDs
-
 - Service data
-
 - Manufacturer patterns
-
 - Known product signatures
-
 - Keywords
-
 - Combinations of several signals
 
 For example:
@@ -592,15 +455,10 @@ However, there are limits.
 If a product:
 
 - Rotates its address
-
 - Removes its name
-
 - Randomises its manufacturer data
-
 - Changes UUID or service information
-
 - Obfuscates useful payload fields
-
 - Stops advertising
 
 then classification may become weaker or impossible.
@@ -609,27 +467,6 @@ The project does not claim to defeat every possible BLE privacy, randomisation, 
 
 ## There Is No Permanent Universal BLE Signature
 There is no single permanent BLE signature that every BLE device is guaranteed to continuously transmit.
-
-Devices may:
-
-- Rotate addresses
-
-- Stop advertising
-
-- Change advertised names
-
-- Change payload contents
-
-- Change behaviour after firmware updates
-
-- Advertise only occasionally
-
-- Provide too little identifying information
-
-- Use changing or encrypted payloads
-
-- Operate without BLE
-
 This project should therefore be treated as an additional privacy-awareness system, not as a guarantee that every smart-glasses, camera, microphone, or recording device will be detected.
 
 ## Which Version Should I Build?
