@@ -1281,7 +1281,101 @@ CYD DEV Lite can capture:
 
 The same privacy rules apply.
 
+## Manual Logging for Signature Development and Database Research
+
+The CYD versions include manual logging tools intended specifically for **signature development, confirmation, database building, and research**.
+
+Manual logging allows the user to deliberately capture BLE observations around a device or event of interest so the resulting data can be reviewed later and compared against known signatures.
+
+This is useful for:
+
+- Adding new smart-glasses signatures
+- Adding new camera/audio signatures
+- Confirming suspected device characteristics
+- Comparing repeated observations from the same known product
+- Identifying useful advertised names
+- Recording Company IDs
+- Recording manufacturer data
+- Recording service UUIDs
+- Comparing address types and advertisement behaviour
+- Distinguishing genuine product characteristics from environmental noise
+- Reducing false positives
+- Building known-device annotations
+- Improving HIGH / MEDIUM / LOW rule tables
+- Expanding the camera/audio database
+- Field research and long-term database refinement
+
+### CYD DEV Lite Manual Capture
+
+CYD DEV Lite can capture a short context window around a manually selected event.
+
+The current design records:
+
+- **5 observations before**
+- **5 observations after**
+
+for a total of:
+
+**10 observations**
+
+This helps preserve the BLE context immediately surrounding a device of interest rather than recording only one isolated advertisement.
+
+For example, if a physically confirmed pair of smart glasses is powered on nearby, manual capture can be used to record the surrounding BLE observations and later identify which advertised name, Company ID, manufacturer data, UUIDs, or other fields consistently appeared with that product.
+
+### CYD Expanded DEV Research Use
+
+CYD Expanded DEV is particularly suited to larger-scale signature development and database research.
+
+It combines:
+
+- Local CYD detection rules
+- Manual observation logging
+- SD storage
+- Expanded database lookups
+- Long-duration Sentry collection
+- Stronger practical BLE reception
+- Supplementary database processing on the second ESP32
+
+This makes it useful as the main development platform for discovering, validating, and refining signatures before proven rules are moved into the smaller S3 and WROOM builds.
+
+### Recommended Signature-Confirmation Process
+
+For reliable database additions:
+
+1. Physically confirm the product being tested.
+2. Capture multiple BLE observations with the CYD.
+3. Repeat the capture in more than one session where practical.
+4. Compare advertised name, Company ID, manufacturer data, UUIDs, and other repeatable fields.
+5. Separate stable product characteristics from changing addresses or temporary values.
+6. Check whether the same characteristic appears on unrelated devices.
+7. Classify the evidence as **CONFIRMED**, **DOCUMENTED**, **FIELD DERIVED**, **REFERENCE ONLY**, or **EXPERIMENTAL**.
+8. Add a detection rule only when the evidence is strong enough for the intended confidence level.
+9. Re-test the rule in normal public environments to check for false positives.
+
+### Privacy During Manual Logging
+
+Manual logging follows the same privacy model as the rest of the project.
+
+Observed raw BLE MAC addresses may be used transiently during processing, but they are not intentionally persisted.
+
+Where correlation is needed, the CYD uses a **session-scoped pseudonymous identifier**.
+
+The same physical BLE device should normally receive a different pseudonym in another session.
+
+Manual logs may therefore contain useful historical observations for research while still avoiding a permanent cross-session observed-device identity.
+
+### Research Principle
+
+Manual logging is intended to answer questions such as:
+
+> **Which BLE characteristics repeatedly belong to this physically confirmed device?**
+
+It should not be used to build permanent histories of unknown nearby people or devices.
+
+The goal is **signature research, confirmation, false-positive reduction, and database improvement**.
 ## Cameras, Microphones, and Consumer “Bugs”
+
+
 All detector families are intended to notify the user when BLE advertisements resemble known or suspected:
 
 - Cameras
