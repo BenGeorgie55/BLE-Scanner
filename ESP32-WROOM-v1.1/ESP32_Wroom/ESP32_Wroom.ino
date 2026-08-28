@@ -1,0 +1,644 @@
+/* ESP32 Wroom — NeoPixel only
+* Target: classic ESP32-WROOM / ESP32 Dev Module, Arduino-ESP32 3.3.11 Bluedroid.
+* . One WS2812/NeoPixel on GPIO 4.
+*/
+#include <Arduino.h>
+#include <BLEDevice.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
+#include <BLEAddress.h>
+#include <BLEUUID.h>
+#include <esp_system.h>
+#include <esp_attr.h>
+#include <esp_gap_ble_api.h>
+#include <string.h>
+#include "hardware_config.h"
+#include "status_led.h"
+#include "ble_private_scan.h"
+#include "lite_counters.h"
+#include "lite_persistent_log.h"
+
+#define SERIAL_BAUD 115200
+#define BLE_SCAN_TIME 2
+#define BLE_SCAN_CYCLE_MS 5000UL
+#define BLE_SCAN_INTERVAL_MS 100
+#define BLE_SCAN_WINDOW_MS 95
+#define LOGGING_CONFIDENCE_MIN 40
+#define POSSIBLE_CONFIDENCE_MIN 60
+#define HIGH_ALERT_CONFIDENCE 97
+#define ALERT_HOLD_MS 10000UL
+#define PRIVATE_START_MAX_FAILURES 3
+#define PRIVATE_FAILURE_FLASH_MS 3000UL
+#define PRIVATE_FAILURE_FLASH_STEP 200UL
+#define TIER_HIGH 0
+#define TIER_MEDIUM 1
+#define TIER_LOW 2
+#include "high_confidence_matches.h"
+#include "medium_confidence_matches.h"
+#include "low_confidence_matches.h"
+#include "false_positives.h"
+#include "camera_audio_matches.h"
+
+struct DetectionResult {
+    bool matched;
+    bool detected;
+    const char*company;
+    const char*product;
+    const char*reason;
+    bool hasCamera;
+    bool cameraKnown;
+    uint8_t tier;
+    uint8_t confidence;
+    const GlassesConfidenceRule*matchedRule;
+};
+struct CameraAudioResult {
+    bool matched;
+    const char*label;
+    CameraAudioCategory category;
+    const char*reason;
+    uint8_t confidence;
+    const CameraAudioRule*matchedRule;
+};
+enum LiteAlertKind:uint8_t {
+    ALERT_NONE=0,ALERT_GLASSES_POSSIBLE,ALERT_CAMERA_AUDIO,ALERT_GLASSES_HIGH
+};
+struct LiteAlertState {
+    LiteAlertKind kind;
+    uint8_t confidence;
+    uint32_t expiresAt;
+    char classification[32];
+};
+BLEScan* pBLEScan=nullptr;
+volatile bool scanFinishedFlag=false;
+bool privateModeActive=false,publicFallbackActive=false;
+esp_bd_addr_t scannerPrivateAddress= {
+    0
+};
+uint32_t scannerPrivateAddressNextRotateMs=0,scannerPrivateAddressIntervalMs=0,lastScanStartMs=0;
+bool firstScanPending=true;
+uint32_t lastCounterPrintMs=0;
+bool logCommandPending=false;
+String serialCommandBuffer;
+portMUX_TYPE alertMux=portMUX_INITIALIZER_UNLOCKED;
+LiteAlertState alertState= {
+    ALERT_NONE,0,0, {
+        0
+    }
+};
+RTC_NOINIT_ATTR uint32_t liteRetryMagic;
+RTC_NOINIT_ATTR uint8_t litePrivateFailureCount;
+static constexpr uint32_t LITE_RETRY_MAGIC=0x57524711UL;
+
+bool containsIgnoreCase(const String&v,const char*n) {
+    if(!n||!v.length())return false;
+    String a=v,b=String(n);
+    a.toLowerCase();
+    b.toLowerCase();
+    return a.indexOf(b)>=0;
+}
+bool startsWithIgnoreCase(const String&v,const char*p) {
+    if(!p||!v.length())return false;
+    String a=v,b=String(p);
+    a.toLowerCase();
+    b.toLowerCase();
+    return a.startsWith(b);
+}
+String bytesToHex(const uint8_t*d,size_t len) {
+    static const char H[]="0123456789ABCDEF";
+    String o;
+    o.reserve(len*2);
+    for(size_t i=0;i<len;i++) {
+        o+=H[(d[i]>>4)&15];
+        o+=H[d[i]&15];
+    }
+    return o;
+}
+String getManufacturerHex(BLEAdvertisedDevice&d) {
+    if(!d.haveManufacturerData())return "";
+    String r=d.getManufacturerData();
+    if(!r.length())return "";
+    return bytesToHex((const uint8_t*)r.c_str(),r.length());
+}
+uint16_t getCompanyId(BLEAdvertisedDevice&d) {
+    if(!d.haveManufacturerData())return 0xFFFF;
+    String r=d.getManufacturerData();
+    if(r.length()<2)return 0xFFFF;
+    return (uint8_t)r[0]|((uint16_t)(uint8_t)r[1]<<8);
+}
+const char*tierName(uint8_t t) {
+    return t==TIER_HIGH?"HIGH-RULE":t==TIER_MEDIUM?"MEDIUM":t==TIER_LOW?"LOW":"UNKNOWN";
+}
+
+bool confidenceRuleMatches(const GlassesConfidenceRule&r,BLEAdvertisedDevice&d,const String&address,const String&name,uint16_t cid,const String&mfg) {
+    bool any=false;
+    if(r.companyId>=0) {
+        any=true;
+        if(cid==0xFFFF||cid!=(uint16_t)r.companyId)return false;
+    }
+    if(r.macExact) {
+        any=true;
+        if(!address.equalsIgnoreCase(r.macExact))return false;
+    }
+    if(r.manufacturerHex) {
+        any=true;
+        String h=mfg,n=r.manufacturerHex;
+        h.replace("_","");
+        n.replace("_","");
+        h.toUpperCase();
+        n.toUpperCase();
+        if(h.indexOf(n)<0)return false;
+    }
+    if(r.serviceUuid16) {
+        any=true;
+        BLEUUID target(r.serviceUuid16);
+        if(!d.isAdvertisingService(target))return false;
+    }
+    if(r.namePattern) {
+        any=true;
+        if(!name.length())return false;
+        bool ok=r.exactName?name.equalsIgnoreCase(r.namePattern):containsIgnoreCase(name,r.namePattern);
+        if(!ok)return false;
+    }
+    if(r.oui24) {
+        any=true;
+        BLEAddress a=d.getAddress();
+        const uint8_t*mac=a.getNative();
+        uint32_t oui=((uint32_t)mac[0]<<16)|((uint32_t)mac[1]<<8)|mac[2];
+        if(oui!=r.oui24)return false;
+    }
+    return any;
+}
+void considerRuleArray(const GlassesConfidenceRule*rules,uint8_t tier,BLEAdvertisedDevice&d,const String&a,const String&n,uint16_t cid,const String&mfg,DetectionResult&best) {
+    for(int i=0;rules[i].company;i++) {
+        const auto&r=rules[i];
+        if(!confidenceRuleMatches(r,d,a,n,cid,mfg))continue;
+        if(best.matched&&r.confidence<=best.confidence)continue;
+        best.matched=true;
+        best.detected=r.confidence>=POSSIBLE_CONFIDENCE_MIN;
+        best.company=r.company;
+        best.product=r.product;
+        best.reason=r.reason?r.reason:"Confidence rule match";
+        best.hasCamera=r.hasCamera;
+        best.cameraKnown=r.cameraKnown;
+        best.tier=tier;
+        best.confidence=r.confidence;
+        best.matchedRule=&r;
+    }
+}
+bool evaluateConfidenceRules(BLEAdvertisedDevice&d,DetectionResult&result) {
+    result= {
+    };
+    String address=d.getAddress().toString().c_str();
+    String name=d.haveName()?String(d.getName().c_str()):String("");
+    name.trim();
+    uint16_t cid=getCompanyId(d);
+    String mfg=getManufacturerHex(d);
+    considerRuleArray(HIGH_CONFIDENCE_RULES,TIER_HIGH,d,address,name,cid,mfg,result);
+    considerRuleArray(MEDIUM_CONFIDENCE_RULES,TIER_MEDIUM,d,address,name,cid,mfg,result);
+    considerRuleArray(LOW_CONFIDENCE_RULES,TIER_LOW,d,address,name,cid,mfg,result);
+    return result.matched;
+}
+bool matchFalsePositive(const String&name,const char*&dev,const char*&type,const char**reason) {
+    dev="";
+    type="";
+    if(reason)*reason="";
+    if(!name.length())return false;
+    for(int i=0;FALSE_POSITIVE_RULES[i].namePattern;i++) {
+        if(!containsIgnoreCase(name,FALSE_POSITIVE_RULES[i].namePattern))continue;
+        dev=FALSE_POSITIVE_RULES[i].assumedDevice?FALSE_POSITIVE_RULES[i].assumedDevice:"";
+        type=FALSE_POSITIVE_RULES[i].assumedType?FALSE_POSITIVE_RULES[i].assumedType:"";
+        if(reason)*reason=FALSE_POSITIVE_RULES[i].reason?FALSE_POSITIVE_RULES[i].reason:"";
+        return true;
+    }
+    return false;
+}
+bool cameraAudioNameMatches(const String&name,const char*p,CameraAudioNameMode m) {
+    if(!p||!name.length())return false;
+    return m==CAMERA_AUDIO_PREFIX?startsWithIgnoreCase(name,p):m==CAMERA_AUDIO_EXACT?name.equalsIgnoreCase(p):containsIgnoreCase(name,p);
+}
+bool evaluateCameraAudio(BLEAdvertisedDevice&d,CameraAudioResult&r) {
+    r= {
+    };
+    String name=d.haveName()?String(d.getName().c_str()):String("");
+    name.trim();
+    if(!name.length())return false;
+    for(int i=0;CAMERA_AUDIO_RULES[i].label;i++) {
+        const auto&x=CAMERA_AUDIO_RULES[i];
+        if(!cameraAudioNameMatches(name,x.namePattern,x.nameMode))continue;
+        if(r.matched&&x.confidence<=r.confidence)continue;
+        r.matched=true;
+        r.label=x.label;
+        r.category=x.category;
+        r.reason=x.reason;
+        r.confidence=x.confidence;
+        r.matchedRule=&x;
+    }
+    return r.matched&&r.confidence>=CAMERA_AUDIO_ALERT_CONFIDENCE;
+}
+void buildGlassesRuleSignature(const GlassesConfidenceRule*r,char*out,size_t n) {
+    if(!out||!n)return;
+    if(!r) {
+        snprintf(out,n,"GLASSES_RULE");
+        return;
+    }
+    if(r->manufacturerHex)snprintf(out,n,"MFG:%s",r->manufacturerHex);
+    else if(r->serviceUuid16)snprintf(out,n,"UUID:%04X",r->serviceUuid16);
+    else if(r->namePattern)snprintf(out,n,"NAME:%s",r->namePattern);
+    else if(r->companyId>=0)snprintf(out,n,"CID:%04X",(unsigned)r->companyId);
+    else if(r->oui24)snprintf(out,n,"OUI:%06lX",(unsigned long)r->oui24);
+    else if(r->macExact)snprintf(out,n,"EXACT_MAC_RULE");
+    else snprintf(out,n,"GLASSES_RULE");
+}
+void buildCameraAudioSignature(const CameraAudioRule*r,char*out,size_t n) {
+    if(!out||!n)return;
+    snprintf(out,n,"NAME:%s",(r&&r->namePattern)?r->namePattern:"CAM_AUDIO");
+}
+uint8_t persistentTierForGlasses(uint8_t t) {
+    return t;
+}
+int alertPriority(LiteAlertKind k) {
+    return k==ALERT_GLASSES_HIGH?3:k==ALERT_CAMERA_AUDIO?2:k==ALERT_GLASSES_POSSIBLE?1:0;
+}
+LiteAlertState currentAlertSnapshot() {
+    LiteAlertState c;
+    portENTER_CRITICAL(&alertMux);
+    c=alertState;
+    portEXIT_CRITICAL(&alertMux);
+    return c;
+}
+bool raiseAlert(LiteAlertKind kind,uint8_t conf,const char*classification) {
+    uint32_t now=millis();
+    bool newEpisode=false;
+    portENTER_CRITICAL(&alertMux);
+    bool active=alertState.kind!=ALERT_NONE&&(int32_t)(now-alertState.expiresAt)<0;
+    if(!active||alertPriority(kind)>alertPriority(alertState.kind)) {
+        newEpisode=true;
+        alertState.kind=kind;
+        alertState.confidence=conf;
+        alertState.expiresAt=now+ALERT_HOLD_MS;
+        strncpy(alertState.classification,classification?classification:"",sizeof(alertState.classification)-1);
+        alertState.classification[sizeof(alertState.classification)-1]='\0';
+    }
+    else if(kind==alertState.kind) {
+        if(conf>alertState.confidence)alertState.confidence=conf;
+        alertState.expiresAt=now+ALERT_HOLD_MS;
+        if(classification&&classification[0]) {
+            strncpy(alertState.classification,classification,sizeof(alertState.classification)-1);
+            alertState.classification[sizeof(alertState.classification)-1]='\0';
+        }
+    }
+    portEXIT_CRITICAL(&alertMux);
+    if(newEpisode) {
+        if(kind==ALERT_GLASSES_POSSIBLE)liteCountersIncrement(LITE_COUNT_ORANGE_POSSIBLE);
+        else if(kind==ALERT_GLASSES_HIGH)liteCountersIncrement(LITE_COUNT_RED_HIGH_GLASSES);
+        else if(kind==ALERT_CAMERA_AUDIO)liteCountersIncrement(LITE_COUNT_RED_CAMERA_AUDIO);
+        lite11NoteAlertEpisode();
+    }
+    return newEpisode;
+}
+void updateStatusLed() {
+    uint32_t now=millis();
+    LiteAlertState c=currentAlertSnapshot();
+    if(c.kind!=ALERT_NONE&&(int32_t)(now-c.expiresAt)<0) {
+        if(c.kind==ALERT_GLASSES_POSSIBLE)liteLedOrange();
+        else liteLedRedStrobe(now);
+        return;
+    }
+    if(c.kind!=ALERT_NONE) {
+        portENTER_CRITICAL(&alertMux);
+        if((int32_t)(millis()-alertState.expiresAt)>=0) {
+            alertState.kind=ALERT_NONE;
+            alertState.confidence=0;
+            alertState.expiresAt=0;
+            alertState.classification[0]='\0';
+        }
+        portEXIT_CRITICAL(&alertMux);
+    }
+    if(privateModeActive)liteLedGreen();
+    else if(publicFallbackActive)liteLedPurple();
+    else liteLedBlue();
+}
+
+void initRtcRetryCounter() {
+    if(liteRetryMagic!=LITE_RETRY_MAGIC) {
+        liteRetryMagic=LITE_RETRY_MAGIC;
+        litePrivateFailureCount=0;
+    }
+}
+void purpleFailureThenRestart(bool inc) {
+    if(inc&&litePrivateFailureCount<255)++litePrivateFailureCount;
+    liteCountersIncrement(LITE_COUNT_PURPLE_PRIVATE_FAIL);
+    liteCountersPersistNow();
+    lite11NotePrivateFailure();
+    lite11PrepareExpectedRestart();
+    lite11FlushPending(true);
+    Serial.printf("PRIVACY ADDRESS FAILURE | private failures=%u/%u | rebooting\n",(unsigned)litePrivateFailureCount,(unsigned)PRIVATE_START_MAX_FAILURES);
+    uint32_t s=millis();
+    bool on=true;
+    while((uint32_t)(millis()-s)<PRIVATE_FAILURE_FLASH_MS) {
+        if(on)liteLedPurple();
+        else liteLedOff();
+        on=!on;
+        delay(PRIVATE_FAILURE_FLASH_STEP);
+    }
+    liteLedPurple();
+    delay(100);
+    ESP.restart();
+    while(true)delay(1000);
+}
+uint32_t choosePrivateAddressRotationIntervalMs() {
+    uint32_t span=BLE_PRIVATE_ADDR_ROTATE_MAX_MS-BLE_PRIVATE_ADDR_ROTATE_MIN_MS;
+    return BLE_PRIVATE_ADDR_ROTATE_MIN_MS+(esp_random()%(span+1UL));
+}
+bool bluedroidPrivateAddressConfirmed(const esp_bd_addr_t expected) {
+    if(expected==nullptr)return false;
+    esp_bd_addr_t used= {
+        0
+    };
+    uint8_t type=0xFF;
+    if(esp_ble_gap_get_local_used_addr(used,&type)!=ESP_OK)return false;
+    if(type!=BLE_ADDR_TYPE_RANDOM)return false;
+    return memcmp(used,expected,sizeof(esp_bd_addr_t))==0;
+}
+bool bluedroidPublicAddressConfirmed() {
+    esp_bd_addr_t used= {
+        0
+    };
+    uint8_t type=0xFF;
+    if(esp_ble_gap_get_local_used_addr(used,&type)!=ESP_OK)return false;
+    return type==BLE_ADDR_TYPE_PUBLIC;
+}
+bool privateAddressStillConfirmed() {
+    return privateModeActive&&bluedroidPrivateAddressConfirmed(scannerPrivateAddress);
+}
+bool applyFreshPrivateNrpa() {
+    if(!pBLEScan||pBLEScan->isScanning())return false;
+    esp_bd_addr_t candidate= {
+        0
+    };
+    esp_err_t rc=esp_ble_gap_addr_create_nrpa(candidate);
+    if(rc!=ESP_OK)return false;
+    if((candidate[0]&0xC0U)!=0)return false;
+    rc=esp_ble_gap_set_rand_addr(candidate);
+    if(rc!=ESP_OK)return false;
+    rc=applyBleScannerOwnAddressRandom(pBLEScan);
+    if(rc!=ESP_OK)return false;
+    bool ok=false;
+    uint32_t s=millis();
+    while((uint32_t)(millis()-s)<BLE_PRIVATE_ADDR_CONFIRM_MS) {
+        if(bluedroidPrivateAddressConfirmed(candidate)) {
+            ok=true;
+            break;
+        }
+        delay(2);
+    }
+    if(!ok)return false;
+    memcpy(scannerPrivateAddress,candidate,sizeof(scannerPrivateAddress));
+    privateModeActive=true;
+    publicFallbackActive=false;
+    litePrivateFailureCount=0;
+    scannerPrivateAddressIntervalMs=choosePrivateAddressRotationIntervalMs();
+    scannerPrivateAddressNextRotateMs=millis()+scannerPrivateAddressIntervalMs;
+    Serial.printf("PRIVATE NRPA ACTIVE | next rotation in %lu ms\n",(unsigned long)scannerPrivateAddressIntervalMs);
+    return true;
+}
+bool applyPublicFallback() {
+    if(!pBLEScan||pBLEScan->isScanning())return false;
+    esp_err_t rc=applyBleScannerOwnAddressPublic(pBLEScan);
+    if(rc!=ESP_OK)return false;
+    esp_ble_gap_clear_rand_addr();
+    bool ok=false;
+    uint32_t s=millis();
+    while((uint32_t)(millis()-s)<BLE_PRIVATE_ADDR_CONFIRM_MS) {
+        if(bluedroidPublicAddressConfirmed()) {
+            ok=true;
+            break;
+        }
+        delay(2);
+    }
+    if(!ok)return false;
+    privateModeActive=false;
+    publicFallbackActive=true;
+    scannerPrivateAddressNextRotateMs=0;
+    Serial.println("PUBLIC BLE ADDRESS FALLBACK ACTIVE");
+    return true;
+}
+void initialiseScannerAddressMode() {
+    if(litePrivateFailureCount>=PRIVATE_START_MAX_FAILURES) {
+        Serial.printf("PRIVATE NRPA failed %u times; entering PUBLIC fallback\n",(unsigned)litePrivateFailureCount);
+        if(!applyPublicFallback())purpleFailureThenRestart(false);
+        liteCountersIncrement(LITE_COUNT_PURPLE_PUBLIC_MODE);
+        liteCountersPersistNow();
+        lite11NotePublicFallback();
+        lite11FlushPending(true);
+        liteLedPurple();
+        return;
+    }
+    if(!applyFreshPrivateNrpa())purpleFailureThenRestart(true);
+    liteCountersIncrement(LITE_COUNT_GREEN_PRIVATE_READY);
+    liteCountersPersistNow();
+    lite11NotePrivateStartSuccess();
+    lite11FlushPending(true);
+    liteLedGreen();
+}
+bool scannerAddressModeConfirmed() {
+    if(privateModeActive)return privateAddressStillConfirmed();
+    if(publicFallbackActive)return bluedroidPublicAddressConfirmed();
+    return false;
+}
+void updatePrivateRotation(uint32_t now) {
+    if(!privateModeActive||!pBLEScan||pBLEScan->isScanning())return;
+    if((int32_t)(now-scannerPrivateAddressNextRotateMs)<0)return;
+    Serial.println("Rotating PRIVATE NRPA");
+    if(!applyFreshPrivateNrpa())purpleFailureThenRestart(true);
+    lite11NotePrivateStartSuccess();
+    lite11FlushPending(true);
+}
+
+class LiteScanCallbacks:public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice d)override {
+        DetectionResult glasses= {
+        };
+        bool glassesMatched=evaluateConfidenceRules(d,glasses);
+        String name=d.haveName()?String(d.getName().c_str()):String("");
+        name.trim();
+        const char*fpDev="";
+        const char*fpType="";
+        const char*fpReason="";
+        bool falsePositive=matchFalsePositive(name,fpDev,fpType,&fpReason);
+        CameraAudioResult cam= {
+        };
+        bool camMatched=evaluateCameraAudio(d,cam);
+        uint8_t actualAlert=LITE11_ALERT_NONE;
+        if(glassesMatched&&!falsePositive&&glasses.confidence>=HIGH_ALERT_CONFIDENCE) {
+            raiseAlert(ALERT_GLASSES_HIGH,glasses.confidence,glasses.product);
+            actualAlert|=LITE11_ALERT_HIGH_GLASSES;
+            Serial.printf("HIGH GLASSES | %s | %u%% | %s\n",glasses.product?glasses.product:"Smart glasses",(unsigned)glasses.confidence,tierName(glasses.tier));
+        }
+        else if(camMatched) {
+            raiseAlert(ALERT_CAMERA_AUDIO,cam.confidence,cam.label);
+            actualAlert|=LITE11_ALERT_CAMERA_AUDIO;
+            Serial.printf("CAMERA/AUDIO REVIEW | %s | %u%%\n",cam.label?cam.label:"Camera/audio device",(unsigned)cam.confidence);
+        }
+        else if(glassesMatched&&!falsePositive&&glasses.confidence>=POSSIBLE_CONFIDENCE_MIN) {
+            raiseAlert(ALERT_GLASSES_POSSIBLE,glasses.confidence,glasses.product);
+            actualAlert|=LITE11_ALERT_POSSIBLE_GLASSES;
+            Serial.printf("POSSIBLE GLASSES | %s | %u%% | %s\n",glasses.product?glasses.product:"Smart glasses",(unsigned)glasses.confidence,tierName(glasses.tier));
+        }
+
+        bool glassesLoggable=glassesMatched&&glasses.confidence>=LOGGING_CONFIDENCE_MIN;
+        bool camLoggable=camMatched&&cam.confidence>=LOGGING_CONFIDENCE_MIN;
+        if(glassesLoggable||camLoggable) {
+            BLEAddress a=d.getAddress();
+            const uint8_t*mac=a.getNative();
+            uint64_t hash=lite11DeviceHashNative(mac,6);
+            uint8_t flags=0;
+            if(glassesLoggable)flags|=LITE11_CLASS_GLASSES;
+            if(camLoggable)flags|=LITE11_CLASS_CAMERA_AUDIO;
+            if(falsePositive)flags|=LITE11_CLASS_FALSE_POSITIVE_SUPPRESSED;
+            const char*classification="";
+            uint8_t conf=0,tier=0xFF,source=LITE11_SOURCE_GLASSES;
+            uint16_t relUuid=0;
+            char sig[24]= {
+                0
+            };
+            bool selectCam=camLoggable&&(!glassesLoggable||cam.confidence>glasses.confidence);
+            if(selectCam) {
+                classification=cam.label?cam.label:"CAMERA/AUDIO REVIEW";
+                conf=cam.confidence;
+                source=LITE11_SOURCE_CAMERA_AUDIO;
+                buildCameraAudioSignature(cam.matchedRule,sig,sizeof(sig));
+            }
+            else {
+                classification=glasses.product?glasses.product:"SMART-GLASSES CANDIDATE";
+                conf=glasses.confidence;
+                tier=persistentTierForGlasses(glasses.tier);
+                source=LITE11_SOURCE_GLASSES;
+                relUuid=glasses.matchedRule?glasses.matchedRule->serviceUuid16:0;
+                buildGlassesRuleSignature(glasses.matchedRule,sig,sizeof(sig));
+            }
+            Lite11ObservationInput in= {
+            };
+            in.deviceHash=hash;
+            in.uptimeMs=millis();
+            in.rssi=(int8_t)d.getRSSI();
+            in.companyId=getCompanyId(d);
+            in.relevantUuid16=relUuid;
+            in.confidence=conf;
+            in.tier=tier;
+            in.source=source;
+            in.classFlags=flags;
+            in.alertFlags=actualAlert;
+            in.falsePositiveSuppressed=falsePositive;
+            in.classification=classification;
+            in.signature=sig;
+            lite11ObserveCandidate(in);
+        }
+    }
+};
+void onBLEScanComplete(BLEScanResults results) {
+    (void)results;
+    scanFinishedFlag=true;
+}
+void pollSerialCommand() {
+    while(Serial.available()>0) {
+        char c=(char)Serial.read();
+        if(c=='\r'||c=='\n') {
+            serialCommandBuffer.trim();
+            if(serialCommandBuffer.length()) {
+                String cmd=serialCommandBuffer;
+                cmd.toUpperCase();
+                if(cmd=="LOG")logCommandPending=true;
+                else Serial.println("UNKNOWN COMMAND - use LOG");
+            }
+            serialCommandBuffer="";
+        }
+        else if(serialCommandBuffer.length()<31)serialCommandBuffer+=c;
+    }
+}
+
+void setup() {
+    Serial.begin(SERIAL_BAUD);
+    delay(250);
+    initRtcRetryCounter();
+    bool cnt=liteCountersBegin();
+    bool logok=lite11PersistentBegin();
+    liteLedBegin();
+    liteLedBlue();
+    liteCountersIncrement(LITE_COUNT_BLUE_BOOT);
+    liteCountersPersistNow();
+    Serial.println();
+    Serial.println("============================================");
+    Serial.println(" ESP32 Wroom");
+    Serial.println(" NeoPixel-only build | GPIO 4 | no OLED");
+    Serial.println("============================================");
+    Serial.printf("PRIVATE failure count: %u/%u\n",(unsigned)litePrivateFailureCount,(unsigned)PRIVATE_START_MAX_FAILURES);
+    Serial.printf("Aggregate counter NVS: %s\n",cnt?"READY":"RAM-ONLY FALLBACK");
+    Serial.printf("Persistent field-test log: %s\n",logok?"READY":"UNAVAILABLE");
+    Serial.printf("NeoPixel: GPIO %d\n",STATUS_NEOPIXEL_PIN);
+    Serial.printf("Session ID: %lu | lifetime boot: %lu\n",(unsigned long)lite11CurrentSessionId(),(unsigned long)lite11LifetimeBootCount());
+    if(!BLEDevice::init("")) {
+        Serial.println("BLE Bluedroid initialization failed");
+        purpleFailureThenRestart(true);
+    }
+    Serial.printf("BLE backend: %s\n",BLEDevice::getBLEStackString().c_str());
+    pBLEScan=BLEDevice::getScan();
+    if(!pBLEScan) {
+        Serial.println("BLE scanner allocation failed");
+        purpleFailureThenRestart(true);
+    }
+    pBLEScan->setAdvertisedDeviceCallbacks(new LiteScanCallbacks(),true);
+    pBLEScan->setActiveScan(true);
+    pBLEScan->setInterval(BLE_SCAN_INTERVAL_MS);
+    pBLEScan->setWindow(BLE_SCAN_WINDOW_MS);
+    initialiseScannerAddressMode();
+    Serial.println("Scan timing: active ~2 s every ~5 s, interval/window 100/95 ms");
+    Serial.println("Alerts: LOW 1-59 none | 60-96 dim orange | 97-100 full-red strobe | camera/audio 90 full-red strobe");
+    Serial.println("LOGGING: >=40% candidates, per-session deduplicated; raw observed BLE MACs are not persisted.");
+    Serial.println("SERIAL COMMAND: LOG");
+    firstScanPending=true;
+    lastCounterPrintMs=millis()-1000UL;
+    updateStatusLed();
+}
+void loop() {
+    uint32_t now=millis();
+    pollSerialCommand();
+    updatePrivateRotation(now);
+    updateStatusLed();
+    if(pBLEScan&&!pBLEScan->isScanning()) {
+        lite11FlushPending(false);
+        if(logCommandPending) {
+            const char*mode=privateModeActive?"PRIVATE_NRPA":publicFallbackActive?"PUBLIC_FALLBACK":"STARTING";
+            lite11DumpAll(mode);
+            liteCountersPrintSerial(mode);
+            logCommandPending=false;
+            now=millis();
+            lastCounterPrintMs=now;
+        }
+        bool due=firstScanPending||((uint32_t)(now-lastScanStartMs)>=BLE_SCAN_CYCLE_MS);
+        if(due) {
+            if(!scannerAddressModeConfirmed()) {
+                Serial.println("BLE own-address verification failed before scan");
+                if(privateModeActive)purpleFailureThenRestart(true);
+                else purpleFailureThenRestart(false);
+            }
+            firstScanPending=false;
+            lastScanStartMs=now;
+            scanFinishedFlag=false;
+            bool started=pBLEScan->start(BLE_SCAN_TIME,onBLEScanComplete,false);
+            if(!started)Serial.println("BLE scan failed to start");
+        }
+    }
+    if(scanFinishedFlag) {
+        scanFinishedFlag=false;
+        if(pBLEScan)pBLEScan->clearResults();
+        lite11FlushPending(false);
+    }
+    if((uint32_t)(now-lastCounterPrintMs)>=1000UL) {
+        const char*mode=privateModeActive?"PRIVATE_NRPA":publicFallbackActive?"PUBLIC_FALLBACK":"STARTING";
+        liteCountersPrintSerial(mode);
+        lastCounterPrintMs=now;
+    }
+    liteCountersCheckpointIfDue(now);
+    delay(10);
+}
