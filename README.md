@@ -1380,17 +1380,11 @@ The goal is **signature research, confirmation, false-positive reduction, and da
 All detector families are intended to notify the user when BLE advertisements resemble known or suspected:
 
 - Cameras
-
 - Hidden-camera products
-
 - Microphones
-
 - Wireless microphones
-
 - Recording devices
-
 - Consumer surveillance devices
-
 - Consumer “bug”-type devices
 
 The database can use combinations of:
@@ -1515,7 +1509,7 @@ No fixed detection distance should be guaranteed without direct measurement.
 
 - Flux
 
-### ⚠️ MANDATORY BEFORE USING THE 8 dBi ANTENNA
+###  MANDATORY BEFORE USING THE 8 dBi ANTENNA
 > **THE CYD'S 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE CHANGED.**
 
 The resistor must be moved / resoldered from the PCB-antenna position to the U.FL / IPEX position.
@@ -2028,31 +2022,18 @@ It is not a guarantee that an area is free from:
 
 ## Flashing Overview
 1. Install Arduino IDE.
-
 2. Install the correct Espressif ESP32 board package.
-
 3. Place the .ino and required project files together.
-
 4. Connect using a USB data cable.
-
 5. Select the correct board.
-
 6. Select the correct serial port.
-
 7. Confirm the required partition configuration.
-
 8. Confirm the required upload speed.
-
 9. Select Verify.
-
 10. Resolve compile errors.
-
 11. Select Upload.
-
 12. Allow flashing to complete.
-
 13. Restart if required.
-
 14. Confirm expected LED/display behaviour.
 
 ### S3 Flashing Summary
@@ -2300,15 +2281,10 @@ Notes:
 Please do not submit another person's captured raw BLE MAC address.
 
 The strongest submissions are:
-
 - Captured from equipment you own
-
 - Captured from equipment you can positively identify
-
 - Repeated observations
-
 - Physically confirmed
-
 - Supported by documentation where possible
 
 ## Version Maturity
@@ -2322,64 +2298,44 @@ Compiled, flashed, and tested against the intended hardware and major functional
 ### EXPERIMENTAL
 Development firmware that operates but still requires broader validation.
 
-### PLANNED
-A feature or design direction that is not currently part of the released firmware.
-
 | Build | Maturity |
 |---|---|
-| **ESP32-S3 Lite v1.1** | **WORKING** |
-| **ESP32-WROOM v1.1** | **WORKING** |
+| **ESP32-S3 Lite v1.1** | **WORKING/ HARDWARE VALIDATED** ** |
+| **ESP32-WROOM v1.1** | **WORKING/ HARDWARE VALIDATED**  |
 | **CYD DEV Lite** | **WORKING / HARDWARE VALIDATED** |
 | **CYD Expanded DEV — 1 of 2** | **WORKING / EXPERIMENTAL / MOSTLY UNTESTED** |
 | **CYD Expanded DEV — 2 of 2** | **WORKING / EXPERIMENTAL / MOSTLY UNTESTED** |
-| **CYD Expanded Wi-Fi scanning** | **PLANNED / EXPERIMENTAL** |
+
 ## Real-World Development and Testing
 The project has been refined through real-world BLE field testing rather than only simulated data.
 
 Part of the database was developed through approximately two weeks of BLE collection and field testing in Sydney, Australia.
 
 Testing has included:
-
-- Public transport
-
+- Public transport busses, metros, trains, stations
 - Shopping environments
-
 - Offices
-
 - Commercial areas
-
 - High-density BLE environments
 
 ## Future Development Roadmap
 Planned development includes:
 
 - Additional verified smart-glasses signatures
-
 - Additional camera/audio signatures
-
 - Australian consumer surveillance-device research
-
 - Additional verified microphone signatures
-
 - Continued field testing
-
 - False-positive reduction
-
 - Improved database provenance
-
 - Expanded Company ID/reference information
-
 - Continued CYD Expanded validation
-
 - Database-coprocessor improvements
-
 - Community-submitted signatures
-
 - Improved installation documentation
-
 - Improved troubleshooting documentation
-
-- Future Wi-Fi scanning
+- Future Wi-Fi scanning with deicated processing for WIFI classification
+- Further development of "fox hunting" behaviour in classification to furture proof changing manufacturer info.
 
 - Migration of proven CYD features into S3/WROOM
 
@@ -2396,25 +2352,15 @@ Bluetooth and radio-monitoring laws vary between countries and jurisdictions.
 Whether a particular use is lawful may depend on:
 
 - What information is collected
-
 - How long it is retained
-
 - Where the detector is deployed
-
 - Who operates it
-
 - Purpose of deployment
-
 - Privacy obligations
-
 - Workplace policies
-
 - School policies
-
 - Healthcare policies
-
 - Correctional-facility rules
-
 - Surveillance legislation
 
 Users are responsible for ensuring deployment is lawful and authorised.
@@ -2431,32 +2377,22 @@ Always disconnect power before soldering and verify the exact board revision and
 
 ## Final Project Principle
 This project is not intended to create fear around Bluetooth devices, cameras, microphones, or smart glasses.
-
 Its purpose is to give people additional information about the radio environment around them.
-
 The detector cannot determine another person's intentions.
-
 It cannot determine whether recording is occurring.
-
 It cannot prove that a camera is active.
-
 It cannot prove that a microphone is active.
-
 It cannot establish that somebody is acting unlawfully.
-
 It can observe BLE radio characteristics and report when those characteristics resemble known or suspected device profiles.
-
 > **This project detects radio characteristics, not people. Its purpose is privacy awareness, not surveillance.**
 
 
 ## Project Development and Proposed Regulation
 
 The Australian Government is proposing measures to restrict or regulate passive data-collection and other privacy-invasive devices.
-
 Whether I continue developing this project will depend on how quickly meaningful legislation is introduced. I also have other obligations that currently require my attention.
 
 ### Possible Wi-Fi Detection
-
 I am considering adding **Wi-Fi OUI detection**. Because Wi-Fi scanning consumes considerably more power than BLE scanning, this feature would only be practical for stationary or externally powered devices:
 
 * **CYD DEV Lite**
@@ -2469,8 +2405,8 @@ It is not currently planned for the smaller, portable detector builds.
 > **Smart glasses have legitimate purposes, particularly as accessibility tools although equal alternatives are available.**
 
 I do not want technological progress or improved accessibility to be held back. My position is not that all smart glasses should be banned.
-
 However, the privacy-invasive capabilities of these devices require appropriate restrictions, safeguards, transparency and accountability. Regulation should control harmful or covert use while protecting legitimate accessibility applications.
-
 While I was developing these detector devices, amendments affecting several digital laws, policies and police-powers laws were before Parliament. The outcome and timing of these reforms may determine whether continued development of this project remains necessary.
+
+
 
