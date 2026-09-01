@@ -32,6 +32,7 @@ I used the following databases and reference sources during development and rese
 - BLE-Payloads lists
 - Fingerbank data
 - Sparrow data
+- My own region specific and environmental specific (Sydney -dense populus area) database, consisting of 4000000 SIGs with more to be classified in the future.
 
 **This project is likely to go mostly unsupported in the future, please read carefully.**
 
@@ -2446,4 +2447,30 @@ It cannot establish that somebody is acting unlawfully.
 It can observe BLE radio characteristics and report when those characteristics resemble known or suspected device profiles.
 
 > **This project detects radio characteristics, not people. Its purpose is privacy awareness, not surveillance.**
+
+
+## Project Development and Proposed Regulation
+
+The Australian Government is proposing measures to restrict or regulate passive data-collection and other privacy-invasive devices.
+
+Whether I continue developing this project will depend on how quickly meaningful legislation is introduced. I also have other obligations that currently require my attention.
+
+### Possible Wi-Fi Detection
+
+I am considering adding **Wi-Fi OUI detection**. Because Wi-Fi scanning consumes considerably more power than BLE scanning, this feature would only be practical for stationary or externally powered devices:
+
+* **CYD DEV Lite**
+* **CYD Expanded DEV**
+
+It is not currently planned for the smaller, portable detector builds.
+
+## Accessibility Must Be Protected
+
+> **Smart glasses have legitimate purposes, particularly as accessibility tools although equal alternatives are available.**
+
+I do not want technological progress or improved accessibility to be held back. My position is not that all smart glasses should be banned.
+
+However, the privacy-invasive capabilities of these devices require appropriate restrictions, safeguards, transparency and accountability. Regulation should control harmful or covert use while protecting legitimate accessibility applications.
+
+While I was developing these detector devices, amendments affecting several digital laws, policies and police-powers laws were before Parliament. The outcome and timing of these reforms may determine whether continued development of this project remains necessary.
 
