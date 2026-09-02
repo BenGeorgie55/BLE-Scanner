@@ -708,6 +708,94 @@ After repeated private-address failures, the firmware may enter a clearly indica
 
 The user should never be led to believe private mode is still operating when it is not.
 
+Saving the Log
+
+After the dump has finished:
+
+Select the complete output.
+Copy it.
+Paste it into a text file.
+
+Save it with a useful filename, for example:
+
+S3_LOG_2026-09-02.txt
+What the Log Can Contain
+
+Depending on what has been observed, the log may contain:
+
+Session information
+Detection confidence
+Classification
+Alert status
+Advertised device name
+Known-device annotation
+Company ID
+Manufacturer-data information
+Relevant service UUID/signature information
+RSSI information
+Session-scoped pseudonymous device hash
+Reset/crash history
+
+The S3 persistent logger records relevant observations at approximately 40% confidence or greater and deduplicates repeated observations.
+
+Raw BLE MAC Address Hashing
+
+The ESP32-S3 Lite does not intentionally store exact observed BLE MAC addresses in persistent logs.
+
+A raw BLE MAC address may be used temporarily in RAM for:
+
+Rule matching
+Deduplication
+OUI/manufacturer lookup
+Generating the session identifier
+
+Before an observed device is written to the persistent log, the raw address is replaced with a session-scoped pseudonymous hash.
+
+Example:
+
+Observed temporarily in RAM:
+AA:BB:CC:12:34:56
+
+Stored in the log:
+MAC-HASH-6351BFCAFC92BE83
+
+The hash uses a session-specific random salt that is not intended to be persisted.
+
+This means the same BLE device should normally receive a different stored hash after a restart or new session.
+
+SESSION 1
+AA:BB:CC:12:34:56
+        |
+        v
+MAC-HASH-6351BFCAFC92BE83
+
+SESSION 2
+AA:BB:CC:12:34:56
+        |
+        v
+MAC-HASH-91A62F834D0E7721
+
+This allows observations to be correlated during a session without deliberately creating a permanent cross-session identity for a nearby BLE device.
+
+The stored hash is a session pseudonym, not a permanent device identifier.
+
+Other BLE fields such as advertised names, manufacturer data, Company IDs, and service UUIDs may still be distinctive, so hashing the MAC address is a privacy measure rather than a guarantee of complete anonymity.
+
+If LOG Does Not Work
+
+Check that:
+
+Serial Monitor is set to 115200 baud
+The correct ESP32-S3 port is selected
+The USB cable supports data
+
+The command is typed exactly as:
+
+LOG
+No other program is using the serial port
+
+Dumping the log with LOG does not erase the stored history.
+
 ### ESP32-S3 Data Flow
 ```text
             NEARBY BLE DEVICE
