@@ -560,6 +560,28 @@ The ESP32-S3 Lite v1.1 requires no assembly tools.
 
 **INTENDED USE: DAILY PORTABLE / TRAVEL**
 
+## ESP32 S3
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="images/esp32-s3/esp32-s3-phone-mounted.jpg" width="100%"><br>
+      <b>Phone-mounted portable setup</b><br>
+      ESP32-S3 Lite mounted to the rear of a phone and powered by USB-C.
+    </td>
+    <td align="center" width="33%">
+      <img src="images/esp32-s3/esp32-s3-portable-hardware.jpg" width="100%"><br>
+      <b>ESP32-S3 Lite hardware</b><br>
+      Compact detector board shown alongside the phone.
+    </td>
+    <td align="center" width="33%">
+      <img src="images/esp32-s3/esp32-s3-phone-powered.jpg" width="100%"><br>
+      <b>USB-C phone-powered operation</b><br>
+      ESP32-S3 Lite operating from a short USB-C connection.
+    </td>
+  </tr>
+</table>
+
 **ASSEMBLY TOOLS REQUIRED: NONE**
 
 The ESP32-S3 Lite is intended to be the easiest entry point into the project.
