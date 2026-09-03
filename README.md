@@ -37,14 +37,1137 @@ I used the following databases and reference sources during development and rese
 **This project is likely to go mostly unsupported in the future, please read carefully.**
 
 # ESP32 Smart-Glasses, Camera, Microphone & BLE Privacy Detector
+
+Open-source ESP32 privacy-awareness detectors for smart glasses, BLE cameras, microphones and recording devices, with portable and facility-focused builds.
+
 > **This project detects radio characteristics, not people. Its purpose is privacy awareness, not surveillance.**
 
 > **No detector can establish whether a nearby camera or microphone is currently recording. Treat alerts as information requiring context, not proof of wrongdoing.**
 
-## About This Project
-This project is designed to make practical privacy-awareness technology accessible to ordinary people, not only developers, electronics specialists, or security researchers.
+**Disclaimer:** Some AI was used during development and documentation of these devices.
 
-The detectors listen for observable Bluetooth Low Energy (BLE) advertisements and compare them against databases containing known, documented, field-derived, reference, and experimental characteristics associated with:
+> **Support notice:** This project is likely to become mostly unsupported or only intermittently maintained in the future. Please read the documentation carefully, keep local copies of firmware and build notes, and be prepared to self-maintain your chosen build.
+
+---
+
+## Privacy and Legal — Quick Summary
+
+### Privacy
+
+This project is designed around local processing and limited retention of observed-device identity.
+
+- No companion phone application is required.
+- BLE detection does not require cloud processing.
+- Exact observed BLE MAC addresses are not intentionally persisted in operational logs.
+- Where correlation is needed, firmware uses session-scoped pseudonymous hashes.
+- The same observed BLE address should normally receive a different pseudonym in a later session.
+- A detection describes radio characteristics, not a person.
+
+> **Full privacy details are provided near the end of this README.**
+
+### Legal and Responsible Use
+
+This project is a privacy-awareness tool, not proof of surveillance or wrongdoing.
+
+A detection means that a nearby BLE advertisement matched one or more configured characteristics or rules.
+
+It does not establish:
+
+- Who owns the device
+- Whether recording is occurring
+- Whether a camera or microphone is active
+- Whether the device is being used unlawfully
+- The intent of any nearby person
+
+Radio, privacy, workplace, surveillance and facility rules vary by jurisdiction and deployment.
+
+> **Users are responsible for ensuring their use is lawful and authorised. Full legal and responsible-use information is provided near the end of this README.**
+
+---
+
+## Which Version Should I Build?
+
+> ### Recommended for Most Users: ESP32-S3 Lite
+>
+> **If you are unsure which version to build, build the ESP32-S3 Lite.**
+>
+> It is the simplest, most straightforward and most conservative portable build in this project.
+>
+> It requires no normal soldering or assembly, uses an onboard RGB status LED, can be powered directly from a compatible phone over USB-C, and avoids the additional display, SD-card, external-antenna and multi-board complexity of the CYD builds.
+
+| Build | Recommendation | Skill Level | Intended Use |
+|---|---|---|---|
+| **ESP32-S3 Lite v1.1** | **Recommended for most users** | Very little practical skill | Everyday portable / travel detector |
+| **ESP32-WROOM v1.1** | Budget portable alternative | Basic soldering | Low-cost portable / travel detector |
+| **CYD DEV Lite** | Fixed / facility option | Moderate | Facilities, SD logging, Sentry and research |
+| **CYD Expanded DEV** | Advanced development platform | Advanced | Stationary research, database development and experimental work |
+
+### Why Start With the ESP32-S3 Lite?
+
+The S3 deliberately keeps the portable detector simple.
+
+There is:
+
+- No external status LED to solder
+- No display to configure
+- No SD card required for normal operation
+- No external antenna modification
+- No second ESP32
+- No UART link between boards
+- No database coprocessor
+- No CYD touchscreen/display configuration
+
+For most people, the S3 is the logical starting point.
+
+---
+
+# Build 1 — ESP32-S3 Lite
+
+**STATUS: WORKING / HARDWARE VALIDATED**
+
+**RECOMMENDATION: DEFAULT CHOICE FOR MOST USERS**
+
+**DIFFICULTY: EASIEST**
+
+**INTENDED USE: EVERYDAY PORTABLE / TRAVEL**
+
+The ESP32-S3 Lite is the recommended general-purpose portable detector.
+
+It provides the core purpose of the project without the additional hardware complexity of the WROOM or CYD versions.
+
+If you simply want a small, straightforward detector that can be powered from your phone and carried with you, **start here**.
+
+## ESP32-S3 Lite — Portable Setup
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="images/esp32-s3/esp32-s3-phone-mounted.jpg" width="100%"><br>
+      <b>Phone-mounted portable setup</b><br>
+      ESP32-S3 Lite mounted to the rear of a phone and powered by USB-C.
+    </td>
+    <td align="center" width="33%">
+      <img src="images/esp32-s3/esp32-s3-portable-hardware.jpg" width="100%"><br>
+      <b>ESP32-S3 Lite hardware</b><br>
+      Compact detector board shown alongside the phone.
+    </td>
+    <td align="center" width="33%">
+      <img src="images/esp32-s3/esp32-s3-phone-powered.jpg" width="100%"><br>
+      <b>USB-C phone-powered operation</b><br>
+      ESP32-S3 Lite operating from a short USB-C connection.
+    </td>
+  </tr>
+</table>
+
+### Parts
+
+- 1 × ESP32-S3 development board
+
+### Optional Hardware
+
+The yellow pin-header strips commonly supplied with ESP32-S3 development boards are **optional**.
+
+They are not required for normal detector operation.
+
+### Assembly Tools Required
+
+**None.**
+
+No soldering, wire cutting or other assembly work is normally required.
+
+### Programming Requirements
+
+- Computer
+- Arduino IDE
+- Arduino-ESP32 3.3.11
+- USB data cable
+- Correct ESP32-S3 board profile
+- Serial Monitor: 115200 baud
+- Upload speed: 921600 baud where reliable
+- Fallback upload speed: 460800 baud
+- OTA updating: not used
+- Partitioning: use the supplied sketch-local `partitions.csv`
+
+A charging-only USB cable will not work for programming.
+
+### Portable Phone-Powered Design
+
+The S3 is designed to be mounted behind a compatible smartphone and powered using a short USB-C-to-USB-C cable of approximately 10 cm.
+
+Practical design estimate:
+
+**Approximately 20% additional phone battery use over an 8-hour day.**
+
+This is an estimate, not a guaranteed specification.
+
+Actual battery use will vary according to:
+
+- Phone model
+- Battery condition
+- USB behaviour
+- Exact S3 board
+- LED activity
+- BLE environment
+- Scanning conditions
+
+### ESP32-S3 LED States
+
+#### Blue — Boot
+
+The detector is starting.
+
+#### Green — Normal Function
+
+Normal private BLE scanning is operating.
+
+Recommended action:
+
+Continue normally.
+
+Green means the detector is functioning normally and no orange or red alert condition has been reached.
+
+Green does not prove that the surrounding area is free from cameras, microphones, smart glasses or recording equipment.
+
+#### Orange — Be Aware
+
+A BLE advertisement has matched a configured possible-device rule.
+
+Recommended action:
+
+Be aware that a device matching one or more relevant BLE characteristics may be nearby.
+
+Orange is a reason for awareness, not alarm.
+
+It does not establish:
+
+- Exact device identity
+- Exact distance
+- Ownership
+- Whether a camera is active
+- Whether a microphone is active
+- Whether recording is occurring
+
+#### Red — Strong Alert
+
+A BLE advertisement has reached a stronger smart-glasses or camera/audio classification.
+
+Recommended action:
+
+Increase awareness of the surrounding environment.
+
+Red does not provide an exact distance measurement.
+
+BLE range varies according to:
+
+- Transmit power
+- Antenna design
+- Walls
+- Human-body attenuation
+- RF interference
+- Device orientation
+- Local environment
+
+Red still does not prove:
+
+- Exact distance
+- Ownership
+- Camera activity
+- Microphone activity
+- Recording
+- Concealment
+- Malicious intent
+- Unlawful behaviour
+
+#### Flashing Purple — Privacy Setup Failure / Retry
+
+Private-address setup has failed and the detector is retrying.
+
+#### Solid Purple — Public-Address Fallback
+
+After repeated private-address failures, the firmware may enter a clearly indicated public-address fallback mode.
+
+The user should never be led to believe private mode is still operating when it is not.
+
+### Dumping Saved S3 Logs
+
+The ESP32-S3 Lite includes a persistent local log that can be dumped over USB for testing, signature research, false-positive analysis and database development.
+
+#### What You Need
+
+- ESP32-S3 Lite
+- USB data cable
+- Computer
+- Arduino IDE
+
+> A charging-only USB cable will not work. The cable must support data.
+
+#### Dump the Log
+
+1. Connect the ESP32-S3 Lite to the computer using USB.
+2. Open **Arduino IDE**.
+3. Select the correct port under **Tools → Port**.
+4. Open **Tools → Serial Monitor**.
+5. Set the Serial Monitor to **115200 baud**.
+6. Allow the detector to finish starting.
+7. Type:
+
+```text
+LOG
+```
+
+8. Press **Enter / Send**.
+9. The ESP32-S3 Lite will print its stored log to the Serial Monitor.
+
+#### Saving the Log
+
+After the dump has finished:
+
+1. Select the complete output.
+2. Copy it.
+3. Paste it into a text file.
+4. Save it with a useful filename, for example:
+
+```text
+S3_LOG_2026-09-02.txt
+```
+
+#### What the Log Can Contain
+
+Depending on what has been observed, the log may contain:
+
+- Session information
+- Detection confidence
+- Classification
+- Alert status
+- Advertised device name
+- Known-device annotation
+- Company ID
+- Manufacturer-data information
+- Relevant service UUID/signature information
+- RSSI information
+- Session-scoped pseudonymous device hash
+- Reset/crash history
+
+The S3 persistent logger records relevant observations at approximately **40% confidence or greater** and deduplicates repeated observations.
+
+#### Raw BLE MAC Address Hashing
+
+The ESP32-S3 Lite does **not intentionally store exact observed BLE MAC addresses in persistent logs**.
+
+A raw BLE MAC address may be used temporarily in RAM for:
+
+- Rule matching
+- Deduplication
+- OUI/manufacturer lookup
+- Generating the session identifier
+
+Before an observed device is written to the persistent log, the raw address is replaced with a **session-scoped pseudonymous hash**.
+
+Example:
+
+```text
+Observed temporarily in RAM:
+AA:BB:CC:12:34:56
+
+Stored in the log:
+MAC-HASH-6351BFCAFC92BE83
+```
+
+The hash uses a session-specific random salt that is not intended to be persisted.
+
+This means the same BLE device should normally receive a different stored hash after a restart or new session.
+
+```text
+SESSION 1
+AA:BB:CC:12:34:56
+        |
+        v
+MAC-HASH-6351BFCAFC92BE83
+
+SESSION 2
+AA:BB:CC:12:34:56
+        |
+        v
+MAC-HASH-91A62F834D0E7721
+```
+
+This allows observations to be correlated during a session without deliberately creating a permanent cross-session identity for a nearby BLE device.
+
+> **The stored hash is a session pseudonym, not a permanent device identifier.**
+
+Other BLE fields such as advertised names, manufacturer data, Company IDs and service UUIDs may still be distinctive, so hashing the MAC address is a privacy measure rather than a guarantee of complete anonymity.
+
+#### If `LOG` Does Not Work
+
+Check that:
+
+- Serial Monitor is set to **115200 baud**
+- The correct ESP32-S3 port is selected
+- The USB cable supports data
+- The command is typed exactly as:
+
+```text
+LOG
+```
+
+- No other program is using the serial port
+
+Dumping the log with `LOG` does **not** erase the stored history.
+
+### ESP32-S3 Data Flow
+
+```text
+            NEARBY BLE DEVICE
+                   |
+                   v
+        +-----------------------+
+        | BLE ADVERTISEMENT     |
+        |                       |
+        | name                  |
+        | Company ID            |
+        | manufacturer data     |
+        | service UUIDs         |
+        +-----------+-----------+
+                    |
+                    v
+        +-----------------------+
+        | ESP32-S3 BLE SCANNER  |
+        | PRIVATE ADDRESS MODE  |
+        +-----------+-----------+
+                    |
+                    v
+        +-----------------------+
+        | DETECTION ENGINE      |
+        |                       |
+        | smart-glasses rules   |
+        | camera/audio rules    |
+        | known devices         |
+        | false-positive rules  |
+        +-----------+-----------+
+                    |
+              +-----+------+
+              |            |
+              v            v
+      +---------------+  +----------------------+
+      | LED ALERT     |  | PRIVACY PROCESS      |
+      |               |  |                      |
+      | green         |  | observed raw MAC     |
+      | orange        |  | transient in RAM     |
+      | red           |  |        |             |
+      | purple        |  |        v             |
+      +---------------+  | session-scoped hash  |
+                         +----------+-----------+
+                                    |
+                                    v
+                         +----------------------+
+                         | SESSION OBSERVATION  |
+                         | RECORD               |
+                         |                      |
+                         | pseudonymous         |
+                         | no raw BLE MAC       |
+                         | no persistent device |
+                         | identity             |
+                         +----------------------+
+```
+
+---
+
+# Build 2 — ESP32-WROOM
+
+**STATUS: WORKING / HARDWARE VALIDATED**
+
+**DIFFICULTY: MODERATE**
+
+**INTENDED USE: DAILY PORTABLE / TRAVEL**
+
+The WROOM is the lower-cost portable alternative.
+
+It uses inexpensive and widely available classic ESP32 hardware, but requires more practical skill than the S3 because the status LED must be wired and soldered.
+
+### Parts
+
+- 1 × ESP32-WROOM development board
+- 1 × WS2812B / NeoPixel LED
+- Approximately 30 cm of wire
+- Solder
+- Flux
+
+### Optional Hardware
+
+The yellow pin-header strips commonly supplied with ESP32-WROOM development boards are **optional**.
+
+They are not required for normal detector operation.
+
+### Tools
+
+- Soldering iron
+- Wire cutters
+- Wire strippers
+- Small screwdriver set
+- Tweezers
+- Multimeter
+- Heat-shrink or electrical tape if required
+- Helping hands / PCB holder if required
+
+### Programming Requirements
+
+- Computer
+- Arduino IDE
+- Arduino-ESP32 3.3.11
+- USB data cable
+- Board: ESP32 Dev Module
+- Upload speed: 115200 baud
+- Serial Monitor: 115200 baud
+- BLE backend: Bluedroid
+- Flash Mode: DIO where applicable
+- OTA updating: not used
+- Partition Scheme: normal/default ESP32 Dev Module scheme
+- No custom `partitions.csv`
+- External library: Adafruit NeoPixel
+
+### Important Hardware Note
+
+The current WROOM v1.1 is:
+
+**WS2812B / NeoPixel only.**
+
+It does not use an OLED display.
+
+NeoPixel data pin:
+
+```text
+GPIO 4
+```
+
+### Portable Phone-Powered Design
+
+The WROOM is also designed for daily portable use behind a compatible smartphone.
+
+Practical design estimate:
+
+**Approximately 20% additional phone battery use over an 8-hour day.**
+
+Actual consumption varies between hardware and phones.
+
+### WROOM LED Guidance
+
+| LED | Meaning | Recommended Response |
+|---|---|---|
+| **Blue** | Boot/startup | Wait for startup |
+| **Green** | Normal private scanning | Continue normally |
+| **Orange** | Possible relevant device profile | Be aware; a matching device may be nearby |
+| **Red** | Strong/high-confidence match | Increase awareness; a strongly matching device is likely nearby |
+| **Purple** | Scanner privacy-address issue | Check privacy status |
+
+LED alerts provide radio-awareness information.
+
+They do not prove recording, ownership, intent, illegality or exact physical distance.
+
+### ESP32-WROOM Data Flow
+
+```text
+            NEARBY BLE DEVICE
+                   |
+                   v
+        +-----------------------+
+        | BLE ADVERTISEMENT     |
+        +-----------+-----------+
+                    |
+                    v
+        +-----------------------+
+        | ESP32-WROOM SCANNER   |
+        +-----------+-----------+
+                    |
+                    v
+        +-----------------------+
+        | RULE DATABASES        |
+        |                       |
+        | smart glasses         |
+        | camera/audio          |
+        | known devices         |
+        | false positives       |
+        +-----------+-----------+
+                    |
+              +-----+------+
+              |            |
+              v            v
+     +----------------+  +---------------------+
+     | WS2812B ALERT  |  | PRIVACY / HASHING   |
+     |                |  |                     |
+     | blue           |  | raw BLE MAC used    |
+     | green          |  | transiently only    |
+     | orange         |  |         |           |
+     | red            |  |         v           |
+     | purple         |  | session-scoped hash |
+     +----------------+  +----------+----------+
+                                   |
+                                   v
+                         +----------------------+
+                         | SESSION OBSERVATION  |
+                         | RECORD               |
+                         |                      |
+                         | no raw BLE MAC       |
+                         | no persistent device |
+                         | identity             |
+                         +----------------------+
+```
+
+---
+
+# Build 3 — CYD DEV Lite
+
+**STATUS: WORKING / HARDWARE VALIDATED**
+
+**BEST FOR: FACILITIES, FIXED DEPLOYMENT AND RESEARCH**
+
+CYD DEV Lite is the stable advanced standalone detector.
+
+It adds a graphical display, SD storage, detailed controls, manual data capture and Sentry Mode.
+
+Suitable authorised deployments can include:
+
+- Childcare facilities
+- After-school care
+- Schools
+- School administration
+- School technology departments
+- Offices
+- Reception areas
+- Front desks
+- Healthcare facilities
+- Aged-care facilities
+- Secure facilities
+- Correctional administration areas
+- Facility entry points
+- Long-term BLE research
+- Database development
+
+### Parts
+
+- 1 × ESP32-2432S028R CYD
+- 1 × CYD case
+- 1 × 3 dBi 2.4 GHz U.FL / IPEX antenna
+- 1 × SD card
+
+### Preferred CYD Hardware
+
+Preferred board characteristics:
+
+- ESP32-U / external-antenna-capable radio module
+- U.FL / IPEX connector
+- USB-C power/programming ports preferred over Micro-USB
+
+The exact radio-module revision supplied by sellers can vary.
+
+Do not assume that seller photographs guarantee the same module or antenna-routing configuration.
+
+### Required External-Antenna Resistor Modification
+
+> **THE 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE MOVED / RESOLDERED BEFORE THE EXTERNAL U.FL / IPEX ANTENNA WILL BE THE ACTIVE RF PATH.**
+
+On the external-antenna-capable CYD boards used during development, the presence of the U.FL / IPEX socket does not mean the external antenna is automatically selected.
+
+The tiny 0-ohm RF selector resistor must be physically moved from the onboard PCB-antenna routing position to the U.FL / IPEX routing position.
+
+If this resistor is not changed, plugging an external antenna into the IPEX socket does not select that antenna.
+
+#### Procedure
+
+1. Disconnect USB and every other power source from the CYD.
+2. Locate the ESP32 radio module, onboard PCB antenna and U.FL / IPEX socket.
+3. Locate the tiny **0-ohm RF antenna-selector resistor** in the antenna-routing area.
+4. Identify the resistor position currently routing the ESP32 RF feed to the onboard PCB antenna.
+5. Using a fine-tip soldering iron, tweezers and magnification, remove the 0-ohm resistor from the PCB-antenna position.
+6. **Move/resolder the same 0-ohm resistor into the selector position that routes the ESP32 RF feed to the U.FL / IPEX connector.**
+7. On a three-pad selector layout, bridge the common RF-feed pad to the U.FL / IPEX path only. **Do not bridge both antenna paths.**
+8. Inspect for solder bridges, lifted pads or other damage.
+9. Connect the external antenna.
+10. Restore power only after the selector has been changed and the antenna is connected.
+
+> **If the 0-ohm resistor remains in the PCB-antenna position, plugging an antenna into the U.FL / IPEX socket does not select the external antenna.**
+
+> **CYD/module revisions can differ. Verify the RF selector layout on the exact board received before moving the resistor.**
+
+### Power
+
+A suitable USB-C wall adapter or fixed USB power source is recommended.
+
+### Programming Requirements
+
+- Computer
+- Arduino IDE
+- Arduino-ESP32 3.3.11
+- USB data cable
+- Target: ESP32-2432S028R CYD
+- Serial Monitor: 115200 baud
+- OTA updating: not used
+- Use the partition configuration supplied with the final CYD package
+
+### Hardware
+
+Display:
+
+```text
+ILI9341
+320 × 240
+Landscape
+Rotation 3
+```
+
+TFT:
+
+```text
+MISO  -> GPIO 12
+MOSI  -> GPIO 13
+SCLK  -> GPIO 14
+CS    -> GPIO 15
+DC    -> GPIO 2
+RST   -> -1
+BL    -> GPIO 21
+```
+
+RGB LED:
+
+```text
+GPIO 4
+GPIO 16
+GPIO 17
+```
+
+BOOT:
+
+```text
+GPIO 0
+```
+
+### Main Features
+
+CYD DEV Lite includes:
+
+- 2.8-inch graphical display
+- BLE smart-glasses detection
+- LOW / POSSIBLE / HIGH rule scoring
+- CAM AND AUDIO classification
+- Suspicious/development-device review
+- Known-device annotation
+- SD logging
+- Manual BLE context capture
+- SYS STAT
+- Self test
+- Sentry Mode
+- Rotating private BLE scanner address
+- Session-scoped pseudonymous device hashes
+
+### CYD DEV Lite Confidence Levels
+
+#### LOW — 1 to 59
+
+Low-confidence evidence is primarily a clue, annotation or reference signal.
+
+LOW does not by itself produce a smart-glasses warning.
+
+#### POSSIBLE — 60 to 96
+
+Orange warning.
+
+The advertisement matched a configured smart-glasses-related rule strong enough to warrant user attention.
+
+#### HIGH — 97 to 100
+
+Red warning.
+
+The advertisement matched a configured rule reaching the firmware's HIGH presentation threshold.
+
+A score is a rule-match score.
+
+It should not be interpreted as:
+
+> “There is a 97% probability this is smart glasses.”
+
+### CYD Sentry Mode
+
+Sentry Mode is primarily designed for long-term unattended or lightly attended deployment.
+
+It is particularly useful for:
+
+- Environmental BLE data collection
+- Long-duration facility monitoring
+- Schools and institutional environments
+- Field research
+- Baseline building
+- Database development
+- Signature research
+- False-positive refinement
+- Understanding BLE activity over time
+
+Sentry is not ESP32 deep sleep.
+
+The detector remains operational while the screen can remain dark and unobtrusive.
+
+The standard configuration waits approximately:
+
+**30 minutes**
+
+between ordinary measurements.
+
+Each measurement lasts approximately:
+
+**10 seconds**
+
+### What Sentry Measures
+
+Sentry counts unique BLE device identities within the measurement window.
+
+It does not simply count every advertisement.
+
+RSSI and estimated distance do not define the Sentry activity metric.
+
+### Baseline Building
+
+The activity threshold is based on the greater of:
+
+- 150% of the existing baseline
+- Baseline + 5 devices
+
+A sample must be strictly above the threshold to trigger active learning.
+
+### Active Learning
+
+When significant activity is detected, Sentry enters a fixed:
+
+**60-minute ACTIVE learning period**
+
+During that period, repeated 10-second BLE windows are collected.
+
+The 60-minute timer is fixed.
+
+Additional activity does not continually restart or extend it.
+
+### Classification Continues
+
+During Sentry scan periods, normal classification can continue using:
+
+- Smart-glasses rules
+- Camera/audio rules
+- Known-device rules
+- Suspicious/development-device rules
+- False-positive handling
+
+Relevant observation logging can also continue.
+
+### Manual CYD BLE Context Capture
+
+CYD DEV Lite can capture:
+
+- 5 observations before
+- 5 observations after
+
+for a total of:
+
+**10 observations**
+
+This provides context around an event of interest for later database analysis.
+
+### Manual Logging for Signature Development and Database Research
+
+The CYD versions include manual logging tools intended specifically for **signature development, confirmation, database building and research**.
+
+Manual logging is useful for:
+
+- Adding new smart-glasses signatures
+- Adding new camera/audio signatures
+- Confirming suspected device characteristics
+- Comparing repeated observations from the same known product
+- Identifying useful advertised names
+- Recording Company IDs
+- Recording manufacturer data
+- Recording service UUIDs
+- Comparing address types and advertisement behaviour
+- Distinguishing genuine product characteristics from environmental noise
+- Reducing false positives
+- Building known-device annotations
+- Improving HIGH / MEDIUM / LOW rule tables
+- Expanding the camera/audio database
+- Field research and long-term database refinement
+
+### Recommended Signature-Confirmation Process
+
+1. Physically confirm the product being tested.
+2. Capture multiple BLE observations with the CYD.
+3. Repeat the capture in more than one session where practical.
+4. Compare advertised name, Company ID, manufacturer data, UUIDs and other repeatable fields.
+5. Separate stable product characteristics from changing addresses or temporary values.
+6. Check whether the same characteristic appears on unrelated devices.
+7. Classify the evidence as **CONFIRMED**, **DOCUMENTED**, **FIELD DERIVED**, **REFERENCE ONLY** or **EXPERIMENTAL**.
+8. Add a detection rule only when the evidence is strong enough for the intended confidence level.
+9. Re-test the rule in normal public environments to check for false positives.
+
+### Research Principle
+
+Manual logging is intended to answer:
+
+> **Which BLE characteristics repeatedly belong to this physically confirmed device?**
+
+It should not be used to build permanent histories of unknown nearby people or devices.
+
+The goal is **signature research, confirmation, false-positive reduction and database improvement**.
+
+---
+
+# Build 4 — CYD Expanded DEV
+
+**STATUS: WORKING / EXPERIMENTAL / MOSTLY UNTESTED**
+
+**CAPABILITY: HIGHEST**
+
+**INTENDED USE: STATIONARY / DEVELOPMENT**
+
+CYD Expanded DEV is the highest-capability version of the current project.
+
+It combines:
+
+- ESP32-2432S028R CYD
+- External 8 dBi U.FL / IPEX antenna
+- Required 0-ohm RF antenna-selector resistor modification
+- SD storage
+- Separate ESP32 database coprocessor
+- Local CYD rules
+- Expanded database architecture
+- Asynchronous UART database lookups
+- Future/planned Wi-Fi development
+
+Potential authorised environments can include:
+
+- Schools
+- School IT departments
+- Healthcare facilities
+- Aged-care facilities
+- Front offices
+- Reception areas
+- Secure facilities
+- Correctional facilities
+- Controlled-access locations
+- Development laboratories
+
+Actual reception and detection range depends heavily on:
+
+- Target-device transmit power
+- Antenna installation
+- Walls
+- Obstructions
+- RF interference
+- Building construction
+- Antenna orientation
+- Local RF conditions
+
+No fixed detection distance should be guaranteed without direct measurement.
+
+### Parts
+
+- 1 × ESP32-2432S028R CYD with onboard U.FL / IPEX-capable radio hardware
+- 1 × CYD case
+- 1 × 8 dBi U.FL / IPEX antenna
+- 1 × additional ESP32 database coprocessor
+- 1 × SD card
+- Approximately 30 cm wire
+- Solder
+- Flux
+
+### Mandatory Before Using the 8 dBi Antenna
+
+> **THE CYD'S 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE CHANGED.**
+
+The resistor must be moved / resoldered from the PCB-antenna position to the U.FL / IPEX position.
+
+The external 8 dBi antenna will not become the selected RF path simply because it is plugged into the U.FL / IPEX socket.
+
+If the 0-ohm selector resistor remains in the PCB-antenna position, the ESP32 radio remains routed to the onboard PCB antenna.
+
+For the CYD Expanded DEV hardware described here, moving this resistor is a required assembly step, not an optional range modification.
+
+### Power
+
+A suitable fixed USB/wall power source is required.
+
+### CYD Expanded External-Antenna Hardware Check
+
+Before flashing or commissioning CYD Expanded DEV, verify:
+
+- The CYD actually has an onboard U.FL / IPEX connector.
+- The delivered radio-module revision is suitable for external-antenna routing.
+- The 0-ohm RF selector resistor has been physically moved / resoldered from the PCB-antenna route to the U.FL / IPEX route.
+- The solder work has been inspected for bridges or damage.
+- The 8 dBi antenna is connected only after the RF selector has been changed.
+
+If the selector modification has not been completed, the external antenna is not the selected RF path.
+
+### Important: CYD Expanded Uses Two Firmware Packages
+
+#### CYD Expanded DEV — 1 of 2
+
+Flash to:
+
+**ESP32-2432S028R CYD**
+
+This is the main:
+
+- BLE scanner
+- Local detection engine
+- Display
+- User interface
+- Privacy engine
+- Logging system
+
+#### CYD Expanded DEV — 2 of 2
+
+Flash to:
+
+**Separate ESP32 database coprocessor**
+
+This is the expanded database-processing half.
+
+```text
+1 OF 2  ----------------->  ESP32-2432S028R CYD
+
+2 OF 2  ----------------->  SEPARATE ESP32
+                             DATABASE COPROCESSOR
+```
+
+> **Do not reverse them.**
+
+### CYD Expanded Programming Requirements
+
+- Computer
+- Arduino IDE
+- Arduino-ESP32 3.3.11
+- USB data cable for each ESP32
+- OTA updating: not used
+- CYD Serial Monitor: 115200 baud
+- CYD-to-database UART: 460800 baud, 8N1
+- Database ESP: classic ESP32 Dev Module
+- Database flash target: approximately 4 MB
+- No PSRAM required
+- Use the build-specific partition configuration supplied with the final firmware
+
+### CYD Expanded UART
+
+Baud:
+
+```text
+460800
+```
+
+Format:
+
+```text
+8N1
+```
+
+Pins:
+
+```text
+CYD TX: GPIO 22
+CYD RX: GPIO 27
+Database ESP RX: GPIO 16
+Database ESP TX: GPIO 17
+```
+
+Wiring:
+
+```text
+CYD GPIO22 TX  ---------->  Database ESP GPIO16 RX
+
+CYD GPIO27 RX  <----------  Database ESP GPIO17 TX
+
+CYD GND        -----------  Database ESP GND
+```
+
+The protocol uses framed binary messages and CRC16 integrity checking.
+
+The external database is supplementary.
+
+If the database processor becomes unavailable, the CYD continues local BLE scanning and local rule evaluation.
+
+### CYD Expanded Busy-Environment Mode
+
+The Expanded build includes a database-servicing strategy for busy BLE environments.
+
+Current design:
+
+- Rolling 60-second activity window
+- Busy mode enters when unique devices are strictly greater than 20 per minute
+- Busy mode exits when activity is strictly below 15
+- Five-advertisement median RSSI
+- Stronger/nearer requests are serviced before weaker/farther requests
+- Weaker/farther observations are not discarded
+- Local CYD rules continue normally
+- Busy mode changes database service order only
+- Busy mode does not change local confidence scoring
+
+### Updating the Bluetooth Company ID Database
+
+CYD Expanded DEV 2 of 2 includes:
+
+```text
+generate_company_db.py
+```
+
+The script generates:
+
+```text
+company_ids_generated.h
+```
+
+#### macOS
+
+```text
+python3 --version
+cd /path/to/ESP32_BLE_DATABASE_COPROCESSOR_v1
+python3 generate_company_db.py
+```
+
+Using local JSON:
+
+```text
+python3 generate_company_db.py --input company_ids.json
+```
+
+#### Windows
+
+```text
+py --version
+cd "C:\path\to\ESP32_BLE_DATABASE_COPROCESSOR_v1"
+py generate_company_db.py
+```
+
+#### Linux
+
+```text
+python3 --version
+cd /path/to/ESP32_BLE_DATABASE_COPROCESSOR_v1
+python3 generate_company_db.py
+```
+
+After regenerating `company_ids_generated.h`:
+
+1. Recompile CYD Expanded DEV 2 of 2.
+2. Reflash the database ESP.
+
+The CYD does not need to be reflashed solely because this generated header changed.
+
+Future Wi-Fi capabilities may change this update process.
+
+---
+
+# Build 5 — All Projects
+
+This section contains information that applies across the detector family rather than to one specific hardware build.
+
+## About This Project
+
+This project is designed to make practical privacy-awareness technology accessible to ordinary people, not only developers, electronics specialists or security researchers.
+
+The detectors listen for observable Bluetooth Low Energy advertisements and compare them against databases containing known, documented, field-derived, reference and experimental characteristics associated with:
 
 - Smart glasses
 - Camera-equipped wearables
@@ -56,7 +1179,7 @@ The detectors listen for observable Bluetooth Low Energy (BLE) advertisements an
 - Consumer “bug”-type devices
 - Other camera/audio-capable BLE equipment
 
-Privacy matters to everyone, but particular consideration has been given to people and environments where privacy, safeguarding, security, or personal safety may be especially important.
+Privacy matters to everyone, but particular consideration has been given to people and environments where privacy, safeguarding, security or personal safety may be especially important.
 
 Potential users and environments include:
 
@@ -80,21 +1203,22 @@ Potential users and environments include:
 - Controlled-access facilities
 - Organisations with legitimate privacy or security requirements
 
-Use in schools, healthcare environments, prisons, workplaces, or other controlled facilities should always be authorised and consistent with applicable law, organisational policy, employment requirements, and local procedures.
+Use in schools, healthcare environments, prisons, workplaces or other controlled facilities should always be authorised and consistent with applicable law, organisational policy, employment requirements and local procedures.
 
 This project is an awareness tool.
 
-It is not designed to identify people, track people, access nearby equipment, interfere with communications, or determine someone's intent.
+It is not designed to identify people, track people, access nearby equipment, interfere with communications or determine someone's intent.
 
 A detection means:
 
-A nearby BLE advertisement resembles a known or suspected device profile.
+> **A nearby BLE advertisement resembles a known or suspected device profile.**
 
 It does not mean:
 
-The person carrying that device is recording.
+> **The person carrying that device is recording.**
 
 ## Intended Detection Scope
+
 This project is primarily designed to identify or flag BLE characteristics associated with consumer-grade and commercially available devices.
 
 Examples include:
@@ -109,12 +1233,9 @@ Examples include:
 - Consumer “bug”-type products
 - Other commercially available BLE-enabled camera/audio equipment
 
-   # Target BLE Devices
+## Target BLE Devices
 
-
-> **Important:** A detected BLE device is not automatically malicious, illegal, or being used improperly. Detection means that the device matched one or more identifiers, signatures, keywords, or behavioural rules used by the project.
-
-## Primary Target Categories
+> **Important:** A detected BLE device is not automatically malicious, illegal or being used improperly. Detection means that the device matched one or more identifiers, signatures, keywords or behavioural rules used by the project.
 
 ### Smart Glasses and Camera Glasses
 
@@ -158,7 +1279,7 @@ The project database may also include rules or signatures relating to:
 
 > Some products may be represented by database rules before sufficient real-world BLE captures are available. A listed product should not be interpreted as a guarantee that every revision of that product can currently be identified.
 
-## Wireless Microphones
+### Wireless Microphones
 
 The project also looks for BLE evidence associated with wireless microphone and audio-recording equipment, including:
 
@@ -174,13 +1295,17 @@ The project also looks for BLE evidence associated with wireless microphone and 
 
 Relevant advertised-name clues may include terms such as:
 
-- `Wireless Mic`
-- `Bluetooth Mic`
-- `MIC-`
+```text
+Wireless Mic
+Bluetooth Mic
+MIC-
+```
 
 Keyword matches alone should not normally be treated as definitive device identification.
 
-## Cameras and Recording Devices
+A specific brand or product should not be described as supported by a firmware release unless its corresponding rule is actually present in that firmware.
+
+### Cameras and Recording Devices
 
 Where detectable through BLE, the project may identify or score:
 
@@ -192,7 +1317,7 @@ Where detectable through BLE, the project may identify or score:
 - Camera remotes
 - Unknown BLE devices matching known camera-related signatures
 
-## Audio Recording Devices
+### Audio Recording Devices
 
 The project may also identify BLE evidence relating to:
 
@@ -255,38 +1380,14 @@ A simplified evidence hierarchy is:
 1. Known device-specific BLE signature
 2. Known manufacturer and product-specific evidence
 3. Manufacturer-data or service-UUID match
-4. Camera, microphone, smart-glasses, or recording-related evidence
+4. Camera, microphone, smart-glasses or recording-related evidence
 5. Relevant advertised-name keyword
 6. Generic or unknown BLE device
 
 The purpose of this approach is to remain sensitive to relevant devices while reducing false positives from ordinary Bluetooth equipment.
 
-## Detection Limitations
-
-BLE detection has inherent limitations.
-
-A target device may:
-
-- Not advertise continuously
-- Disable Bluetooth
-- Use changing private/random addresses
-- Change firmware or advertisement format
-- Advertise without a readable name
-- Use identifiers shared with unrelated products
-- Be outside practical radio range
-- Be shielded by walls, people, vehicles, or other obstacles
-
-Likewise, a non-target device can occasionally resemble a known target.
-
-For these reasons, project detections should be treated as **indicators requiring context**, not proof that a particular person is recording, tracking, or acting unlawfully.
-
-Accordingly:
-
-This project is intended primarily for awareness of consumer-grade and commercially available BLE devices. It should not be relied upon to detect military-grade, intelligence-grade, specialist covert, or purpose-built advanced surveillance equipment.
-
-The absence of an alert must never be interpreted as proof that an environment contains no recording, surveillance, camera, or microphone equipment.
-
 ## Why Dedicated Hardware Instead of Only a Phone App?
+
 Bluetooth-scanning applications already exist and can be useful.
 
 This project takes a different approach: the ESP32 itself performs BLE scanning and classification.
@@ -302,7 +1403,7 @@ The detector does not require access to:
 - Phone location history or active location
 - The phone camera
 - The phone microphone
-  
+
 It also does not require:
 
 - A companion phone application
@@ -312,11 +1413,14 @@ It also does not require:
 
 A dedicated detector can remain focused on BLE scanning without depending on a phone application remaining open or receiving unrestricted background execution from the phone operating system.
 
-This does not mean every Bluetooth-scanning app is insecure. Different applications have different privacy models, background-operation limitations, and operating-system restrictions.
+This does not mean every Bluetooth-scanning app is insecure.
+
+Different applications have different privacy models, background-operation limitations and operating-system restrictions.
 
 This project instead provides a separate, inspectable hardware detector with local processing.
 
 ## What Is Bluetooth Low Energy?
+
 Bluetooth Low Energy, normally abbreviated BLE, is the low-power part of the Bluetooth standard.
 
 BLE was designed to allow devices to exchange relatively small amounts of information while using substantially less energy than continuously active conventional radio communication.
@@ -341,7 +1445,7 @@ Common BLE applications include:
 - Sensors
 - Fitness equipment
 - Medical accessories
-- Smarthome equipment
+- Smart-home equipment
 - Electronic tags
 - Smart glasses
 - Cameras and accessories
@@ -350,12 +1454,12 @@ Common BLE applications include:
 BLE is not limited to small devices, but low power consumption is one of the main reasons it is widely used in compact battery-powered electronics.
 
 ## How BLE Advertising Works
+
 Bluetooth Low Energy uses a mechanism called advertising.
 
 Advertising is a fundamental part of BLE discovery and connectionless communication.
 
-A BLE device that wants to announce its presence or make itself available for discovery can transmit short advertising packets without first establishing a connection. 
-*Most devices do this constantly every 5-10 seconds*
+A BLE device that wants to announce its presence or make itself available for discovery can transmit short advertising packets without first establishing a connection.
 
 Another BLE receiver can therefore hear those advertisements without:
 
@@ -371,21 +1475,21 @@ Another BLE receiver can therefore hear those advertisements without:
 Advertising is normal BLE behaviour and is not caused by this detector.
 
 ## Advertising Timing
-Normal BLE advertising does not necessarily occur every few milliseconds.
+
+BLE advertising frequency depends on the device and configuration.
 
 Traditional BLE advertising intervals can commonly range from approximately:
 
-20 milliseconds
+**20 milliseconds**
 
 to:
 
-10.24 seconds
-
-depending on the device and configuration.
+**10.24 seconds**
 
 A manufacturer may choose a shorter interval for fast discovery or a longer interval to reduce power consumption.
 
 ## What Can a BLE Advertisement Contain?
+
 Depending on the product, BLE advertisements may expose characteristics such as:
 
 - Advertised name
@@ -411,7 +1515,8 @@ The detector does not need to:
 - Activate its microphone
 
 ## What About Devices That Change or Hide Their BLE Address?
-Modern BLE devices often use randomised, private, or rotating Bluetooth addresses.
+
+Modern BLE devices often use randomised, private or rotating Bluetooth addresses.
 
 A changing BLE address does not automatically defeat these detectors.
 
@@ -429,7 +1534,7 @@ They can also examine characteristics such as:
 - Keywords
 - Combinations of several signals
 
-For example:
+Example:
 
 ```text
 ADVERTISEMENT 1
@@ -464,31 +1569,47 @@ If a product:
 
 then classification may become weaker or impossible.
 
-The project does not claim to defeat every possible BLE privacy, randomisation, encryption, or obfuscation method.
+The project does not claim to defeat every possible BLE privacy, randomisation, encryption or obfuscation method.
 
 ## There Is No Permanent Universal BLE Signature
+
 There is no single permanent BLE signature that every BLE device is guaranteed to continuously transmit.
-This project should therefore be treated as an additional privacy-awareness system, not as a guarantee that every smart-glasses, camera, microphone, or recording device will be detected.
 
-## Which Version Should I Build?
+This project should therefore be treated as an additional privacy-awareness system, not as a guarantee that every smart-glasses, camera, microphone or recording device will be detected.
 
-| Version | Cost / Availability | Skill Level | Intended Use |
-|---|---|---|---|
-| **ESP32-S3 Lite v1.1** | Slightly more expensive and sometimes harder to source | Very little practical skill | Simplest daily portable/travel detector |
-| **ESP32-WROOM v1.1** | Cheapest and widely available | Some soldering and practical knowledge | Budget daily portable/travel detector |
-| **CYD DEV Lite** | More expensive and larger | Some technical knowledge | Schools, childcare, offices, healthcare, aged care, facilities and fixed deployment |
-| **CYD Expanded DEV** | Highest cost and complexity | Advanced technical/development skill | Highest-capability stationary detector and development platform |
+## Detection Limitations
+
+BLE detection has inherent limitations.
+
+A target device may:
+
+- Not advertise continuously
+- Disable Bluetooth
+- Use changing private/random addresses
+- Change firmware or advertisement format
+- Advertise without a readable name
+- Use identifiers shared with unrelated products
+- Be outside practical radio range
+- Be shielded by walls, people, vehicles or other obstacles
+
+Likewise, a non-target device can occasionally resemble a known target.
+
+For these reasons, project detections should be treated as **indicators requiring context**, not proof that a particular person is recording, tracking or acting unlawfully.
+
+This project is intended primarily for awareness of consumer-grade and commercially available BLE devices.
+
+It should not be relied upon to detect military-grade, intelligence-grade, specialist covert or purpose-built advanced surveillance equipment.
+
+The absence of an alert must never be interpreted as proof that an environment contains no recording, surveillance, camera or microphone equipment.
+
 ## Requirements Common to Every Build
+
 Every version requires:
 
 - A computer
-
 - Arduino IDE
-
 - A suitable USB data cable
-
 - The correct Espressif ESP32 board package
-
 - The libraries required by that firmware package
 
 A charging-only USB cable will not work for programming.
@@ -496,19 +1617,17 @@ A charging-only USB cable will not work for programming.
 Arduino IDE and the USB cable are programming/setup requirements rather than assembly tools.
 
 ## Firmware Updating and Partitions
+
 Current public builds are intended to be programmed directly over USB.
 
 OTA firmware updating is not part of the normal public update workflow.
 
 Firmware changes are normally installed by:
 
-1. Connecting the ESP32 to a computer
-
-2. Opening the correct Arduino project
-
-3. Compiling the firmware
-
-4. Uploading it over USB
+1. Connecting the ESP32 to a computer.
+2. Opening the correct Arduino project.
+3. Compiling the firmware.
+4. Uploading it over USB.
 
 Partition layouts can vary between builds because each detector uses flash differently.
 
@@ -518,1622 +1637,31 @@ Do not substitute another partition scheme unless you understand why it is being
 
 Examples:
 
-- S3 Lite uses its supplied sketch-local partitions.csv
-
+- S3 Lite uses its supplied sketch-local `partitions.csv`
 - WROOM uses its verified normal/default partition layout
-
 - CYD builds should use the configuration supplied with their final package
-
 - The Expanded database ESP should use the verified application-space configuration supplied for that firmware
 
-Where a build specifically uses a configuration such as:
-
-No OTA / approximately 2 MB application / filesystem space
-
-follow the build-specific instructions rather than assuming that setting applies universally.
-
 ## General Assembly Tools
+
 Where assembly is required:
 
 - Soldering iron
-
 - Wire cutters
-
 - Wire strippers
-
 - Small screwdriver set
-
 - Tweezers
-
 - Multimeter
-
 - Heat-shrink or electrical tape if required
-
 - Helping hands / PCB holder if required
 
 The ESP32-S3 Lite v1.1 requires no assembly tools.
 
-## ESP32-S3 Lite v1.1
-**STATUS: WORKING**
-
-**DIFFICULTY: EASIEST**
-
-**INTENDED USE: DAILY PORTABLE / TRAVEL**
-
-## ESP32 S3
-
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <img src="images/esp32-s3/esp32-s3-phone-mounted.jpg" width="100%"><br>
-      <b>Phone-mounted portable setup</b><br>
-      ESP32-S3 Lite mounted to the rear of a phone and powered by USB-C.
-    </td>
-    <td align="center" width="33%">
-      <img src="images/esp32-s3/esp32-s3-portable-hardware.jpg" width="100%"><br>
-      <b>ESP32-S3 Lite hardware</b><br>
-      Compact detector board shown alongside the phone.
-    </td>
-    <td align="center" width="33%">
-      <img src="images/esp32-s3/esp32-s3-phone-powered.jpg" width="100%"><br>
-      <b>USB-C phone-powered operation</b><br>
-      ESP32-S3 Lite operating from a short USB-C connection.
-    </td>
-  </tr>
-</table>
-
-**ASSEMBLY TOOLS REQUIRED: NONE**
-
-The ESP32-S3 Lite is intended to be the easiest entry point into the project.
-
-### Parts
-1 × ESP32-S3 board
-
-### Programming Requirements
-- Computer
-
-- Arduino IDE
-
-- Arduino-ESP32 3.3.11
-
-- USB data cable
-
-- Correct ESP32-S3 board profile
-
-- Serial Monitor: 115200 baud
-
-- Upload speed: 921600 baud where reliable
-
-- Fallback upload speed: 460800 baud
-
-- OTA updating: not used
-
-- Partitioning: use the supplied sketch-local partitions.csv
-
-No soldering, wire cutting, or other assembly work is normally required.
-
-### Portable Phone-Powered Design
-The S3 is designed to be mounted behind a compatible smartphone and powered using a short USB-C-to-USB-C cable of approximately 10 cm.
-
-Practical design estimate:
-
-Approximately 20% additional phone battery use over an 8-hour day.
-
-This is an estimate, not a guaranteed specification.
-
-Actual battery use will vary according to:
-
-- Phone model
-
-- Battery condition
-
-- USB behaviour
-
-- Exact S3 board
-
-- LED activity
-
-- BLE environment
-
-- Scanning conditions
-
-### ESP32-S3 LED States
-#### Blue — Boot
-The detector is starting.
-
-#### Green — Normal Function
-Normal private BLE scanning is operating.
-
-Recommended action:
-
-Continue normally.
-
-Green means the detector is functioning normally and no orange or red alert condition has been reached.
-
-Green does not prove that the surrounding area is free from cameras, microphones, smart glasses, or recording equipment.
-
-#### Orange — Be Aware
-A BLE advertisement has matched a configured possible-device rule.
-
-Recommended action:
-
-Be aware that a device matching one or more relevant BLE characteristics may be nearby.
-
-Remain aware of your surroundings and consider the context.
-
-Orange is a reason for awareness, not alarm.
-
-It does not establish:
-
-- Exact device identity
-
-- Exact distance
-
-- Ownership
-
-- Whether a camera is active
-
-- Whether a microphone is active
-
-- Whether recording is occurring
-
-#### Red — Strong Alert
-A BLE advertisement has reached a stronger smart-glasses or camera/audio classification.
-
-Recommended action:
-
-Be aware that a strongly matching device is highly likely to be nearby.
-
-Increase awareness of the surrounding environment.
-
-Red does not provide an exact distance measurement.
-
-BLE range varies according to:
-
-- Transmit power
-
-- Antenna design
-
-- Walls
-
-- Human-body attenuation
-
-- RF interference
-
-- Device orientation
-
-- Local environment
-
-Red still does not prove:
-
-- Exact distance
-
-- Ownership
-
-- Camera activity
-
-- Microphone activity
-
-- Recording
-
-- Concealment
-
-- Malicious intent
-
-- Unlawful behaviour
-
-#### Flashing Purple — Privacy Setup Failure / Retry
-Private-address setup has failed and the detector is retrying.
-
-#### Solid Purple — Public-Address Fallback
-After repeated private-address failures, the firmware may enter a clearly indicated public-address fallback mode.
-
-The user should never be led to believe private mode is still operating when it is not.
-
-Saving the Log
-
-After the dump has finished:
-
-Select the complete output.
-Copy it.
-Paste it into a text file.
-
-Save it with a useful filename, for example:
-
-S3_LOG_2026-09-02.txt
-What the Log Can Contain
-
-Depending on what has been observed, the log may contain:
-
-Session information
-Detection confidence
-Classification
-Alert status
-Advertised device name
-Known-device annotation
-Company ID
-Manufacturer-data information
-Relevant service UUID/signature information
-RSSI information
-Session-scoped pseudonymous device hash
-Reset/crash history
-
-The S3 persistent logger records relevant observations at approximately 40% confidence or greater and deduplicates repeated observations.
-
-Raw BLE MAC Address Hashing
-
-The ESP32-S3 Lite does not intentionally store exact observed BLE MAC addresses in persistent logs.
-
-A raw BLE MAC address may be used temporarily in RAM for:
-
-Rule matching
-Deduplication
-OUI/manufacturer lookup
-Generating the session identifier
-
-Before an observed device is written to the persistent log, the raw address is replaced with a session-scoped pseudonymous hash.
-
-Example:
-
-Observed temporarily in RAM:
-AA:BB:CC:12:34:56
-
-Stored in the log:
-MAC-HASH-6351BFCAFC92BE83
-
-The hash uses a session-specific random salt that is not intended to be persisted.
-
-This means the same BLE device should normally receive a different stored hash after a restart or new session.
-
-SESSION 1
-AA:BB:CC:12:34:56
-        |
-        v
-MAC-HASH-6351BFCAFC92BE83
-
-SESSION 2
-AA:BB:CC:12:34:56
-        |
-        v
-MAC-HASH-91A62F834D0E7721
-
-This allows observations to be correlated during a session without deliberately creating a permanent cross-session identity for a nearby BLE device.
-
-The stored hash is a session pseudonym, not a permanent device identifier.
-
-Other BLE fields such as advertised names, manufacturer data, Company IDs, and service UUIDs may still be distinctive, so hashing the MAC address is a privacy measure rather than a guarantee of complete anonymity.
-
-If LOG Does Not Work
-
-Check that:
-
-Serial Monitor is set to 115200 baud
-The correct ESP32-S3 port is selected
-The USB cable supports data
-
-The command is typed exactly as:
-
-LOG
-No other program is using the serial port
-
-Dumping the log with LOG does not erase the stored history.
-
-### ESP32-S3 Data Flow
-```text
-            NEARBY BLE DEVICE
-                   |
-                   v
-        +-----------------------+
-        | BLE ADVERTISEMENT     |
-        |                       |
-        | name                  |
-        | Company ID            |
-        | manufacturer data     |
-        | service UUIDs         |
-        +-----------+-----------+
-                    |
-                    v
-        +-----------------------+
-        | ESP32-S3 BLE SCANNER  |
-        | PRIVATE ADDRESS MODE  |
-        +-----------+-----------+
-                    |
-                    v
-        +-----------------------+
-        | DETECTION ENGINE      |
-        |                       |
-        | smart-glasses rules   |
-        | camera/audio rules    |
-        | known devices         |
-        | false-positive rules  |
-        +-----------+-----------+
-                    |
-              +-----+------+
-              |            |
-              v            v
-      +---------------+  +----------------------+
-      | LED ALERT     |  | PRIVACY PROCESS      |
-      |               |  |                      |
-      | green         |  | observed raw MAC     |
-      | orange        |  | transient in RAM     |
-      | red           |  |        |             |
-      | purple        |  |        v             |
-      +---------------+  | session-scoped hash  |
-                         +----------+-----------+
-                                    |
-                                    v
-                         +----------------------+
-                         | SESSION OBSERVATION  |
-                         | RECORD               |
-                         |                      |
-                         | pseudonymous         |
-                         | no raw BLE MAC       |
-                         | no persistent device |
-                         | identity             |
-                         +----------------------+
-```
-
-## ESP32-WROOM v1.1
-**STATUS: WORKING**
-
-**DIFFICULTY: MODERATE**
-
-**INTENDED USE: DAILY PORTABLE / TRAVEL**
-
-The WROOM provides the lowest-cost version of the detector using inexpensive and widely available classic ESP32 hardware.
-
-It requires more practical skill than the S3.
-
-### Parts
-- 1 × ESP32-WROOM development board
-
-- 1 × WS2812B / NeoPixel LED
-
-- Approximately 30 cm of wire
-
-- Solder
-
-- Flux
-
-### Tools
-- Soldering iron
-
-- Wire cutters
-
-- Wire strippers
-
-- Small screwdriver set
-
-- Tweezers
-
-- Multimeter
-
-- Heat-shrink or electrical tape if required
-
-- Helping hands / PCB holder if required
-
-### Programming Requirements
-- Computer
-
-- Arduino IDE
-
-- Arduino-ESP32 3.3.11
-
-- USB data cable
-
-- Board: ESP32 Dev Module
-
-- Upload speed: 115200 baud
-
-- Serial Monitor: 115200 baud
-
-- BLE backend: Bluedroid
-
-- Flash Mode: DIO where applicable
-
-- OTA updating: not used
-
-- Partition Scheme: normal/default ESP32 Dev Module scheme
-
-- No custom partitions.csv
-
-- External library: Adafruit NeoPixel
-
-### Important Hardware Note
-The current WROOM v1.1 is:
-
-WS2812B / NeoPixel only.
-
-It does not use an OLED display.
-
-NeoPixel data pin:
-
-GPIO 4
-
-### Portable Phone-Powered Design
-The WROOM is also designed for daily portable use behind a compatible smartphone.
-
-Practical design estimate:
-
-Approximately 20% additional phone battery use over an 8-hour day.
-
-Actual consumption varies between hardware and phones.
-
-### WROOM LED Guidance
-
-The WROOM uses the same basic portable status approach.
-
-| LED | Meaning | Recommended Response |
-|---|---|---|
-| **Blue** | Boot/startup | Wait for startup |
-| **Green** | Normal private scanning | Continue normally |
-| **Orange** | Possible relevant device profile | Be aware; a matching device may be nearby |
-| **Red** | Strong/high-confidence match | Increase awareness; a strongly matching device is likely nearby |
-| **Purple** | Scanner privacy-address issue | Check privacy status |
-LED alerts provide radio-awareness information.
-
-They do not prove recording, ownership, intent, illegality, or exact physical distance.
-
-### ESP32-WROOM Data Flow
-```text
-            NEARBY BLE DEVICE
-                   |
-                   v
-        +-----------------------+
-        | BLE ADVERTISEMENT     |
-        +-----------+-----------+
-                    |
-                    v
-        +-----------------------+
-        | ESP32-WROOM SCANNER   |
-        +-----------+-----------+
-                    |
-                    v
-        +-----------------------+
-        | RULE DATABASES        |
-        |                       |
-        | smart glasses         |
-        | camera/audio          |
-        | known devices         |
-        | false positives       |
-        +-----------+-----------+
-                    |
-              +-----+------+
-              |            |
-              v            v
-     +----------------+  +---------------------+
-     | WS2812B ALERT  |  | PRIVACY / HASHING   |
-     |                |  |                     |
-     | blue           |  | raw BLE MAC used    |
-     | green          |  | transiently only    |
-     | orange         |  |         |           |
-     | red            |  |         v           |
-     | purple         |  | session-scoped hash |
-     +----------------+  +----------+----------+
-                                   |
-                                   v
-                         +----------------------+
-                         | SESSION OBSERVATION  |
-                         | RECORD               |
-                         |                      |
-                         | no raw BLE MAC       |
-                         | no persistent device |
-                         | identity             |
-                         +----------------------+
-```
-
-## CYD Hardware Procurement Note
-The two development CYDs obtained from the referenced vendor arrived with SparkleIoT ESP32 radio modules that included onboard U.FL / IPEX connectors.
-
-This appears to be variable hardware stock. Seller photographs may show a standard ESP32 module, so another buyer is not guaranteed to receive the SparkleIoT/IPEX-equipped version.
-
-For an external-antenna build:
-
-- Confirm the delivered board physically has the U.FL / IPEX connector.
-
-- Do not assume the seller will supply the same radio-module revision.
-
-- Even if the connector is present, the 0-ohm RF selector resistor must still be moved / resoldered to route RF to U.FL / IPEX on the development configuration described in this project.
-
-### Required U.FL / IPEX Resistor Change Procedure
-
-> **This resistor move is required for the external-antenna CYD configuration. It is not an optional range modification. Disconnect all power before soldering.**
-
-1. Disconnect USB and every other power source from the CYD.
-2. Locate the ESP32 radio module, the onboard PCB antenna, and the U.FL / IPEX socket.
-3. Locate the tiny **0-ohm RF antenna-selector resistor** in the antenna-routing area.
-4. Identify the resistor position that currently routes the ESP32 RF feed to the onboard PCB antenna.
-5. Using a fine-tip soldering iron, tweezers, and magnification, remove the 0-ohm resistor from the PCB-antenna position.
-6. **Move/resolder the same 0-ohm resistor into the selector position that routes the ESP32 RF feed to the U.FL / IPEX connector.**
-7. On a three-pad selector layout, the resistor must bridge the common RF-feed pad to the U.FL / IPEX path only. **Do not bridge both antenna paths.**
-8. Inspect the area carefully for solder bridges, lifted pads, or other damage.
-9. Connect the external antenna to the U.FL / IPEX socket.
-10. Restore power only after the selector resistor has been moved and the external antenna has been connected.
-
-> **If the 0-ohm resistor is still in the PCB-antenna position, plugging an antenna into the U.FL / IPEX socket does not select the external antenna.**
-
-> **CYD/module revisions can differ. Identify the RF selector and the correct antenna-routing pads on the exact board received before moving the resistor.**
-
-## CYD DEV Lite
-**STATUS: WORKING / HARDWARE VALIDATED**
-
-**BEST FOR: FACILITIES AND FIXED LOCATIONS**
-
-CYD DEV Lite is the stable advanced standalone detector.
-
-It adds a graphical display, SD storage, detailed controls, manual data capture, and Sentry Mode.
-
-Suitable authorised deployments include:
-
-- Childcare facilities
-
-- After-school care
-
-- Schools
-
-- School administration
-
-- School technology departments
-
-- Offices
-
-- Reception areas
-
-- Front desks
-
-- Healthcare facilities
-
-- Aged-care facilities
-
-- Secure facilities
-
-- Correctional administration areas
-
-- Facility entry points
-
-- Long-term BLE research
-
-- Database development
-
-### Parts
-- 1 × ESP32-2432S028R CYD
-
-- 1 × CYD case
-
-- 1 × 3 dBi 2.4 GHz U.FL / IPEX antenna
-
-- 1 × SD card
-
-### ⚠️ CRITICAL CYD EXTERNAL-ANTENNA MODIFICATION
-> **THE 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE MOVED / RESOLDERED BEFORE THE EXTERNAL U.FL / IPEX ANTENNA WILL BE THE ACTIVE RF PATH.**
-
-On the SparkleIoT/IPEX-equipped CYD boards used during development, the presence of the U.FL / IPEX socket does not mean the external antenna is automatically connected to the ESP32 radio.
-
-The tiny 0-ohm RF selector resistor must be physically moved from the PCB-antenna routing position to the U.FL / IPEX routing position.
-
-If this resistor is not changed, plugging an external antenna into the IPEX socket does not select that antenna. The radio remains routed to the onboard PCB antenna.
-
-This resistor change is therefore a required hardware modification for the external-antenna CYD configuration.
-
-Disconnect power before soldering. Fine SMD soldering skills and magnification are strongly recommended. Component placement may vary between CYD revisions, so identify the selector on the exact board received before moving it.
-
-### Power
-A suitable USB-C wall adapter or fixed USB power source is recommended.
-
-### Programming Requirements
-- Computer
-
-- Arduino IDE
-
-- Arduino-ESP32 3.3.11
-
-- USB data cable
-
-- Target: ESP32-2432S028R CYD
-
-- Serial Monitor: 115200 baud
-
-- OTA updating: not used
-
-- Use the partition configuration supplied with the final CYD package
-
-### Hardware
-Display:
-
-```text
-ILI9341
-
-320 × 240
-
-Landscape
-
-Rotation 3
-
-TFT:
-
-MISO  -> GPIO 12
-MOSI  -> GPIO 13
-SCLK  -> GPIO 14
-CS    -> GPIO 15
-DC    -> GPIO 2
-RST   -> -1
-BL    -> GPIO 21
-
-RGB LED:
-
-GPIO 4
-GPIO 16
-GPIO 17
-
-BOOT:
-
-GPIO 0
-```
-
-### Main Features
-- CYD DEV Lite includes:
-
-- 2.8-inch graphical display
-
-- BLE smart-glasses detection
-
-- LOW / POSSIBLE / HIGH rule scoring
-
-- CAM AND AUDIO classification
-
-- Suspicious/development-device review
-
-- Known-device annotation
-
-- SD logging
-
-- Manual BLE context capture
-
-- SYS STAT
-
-- Self test
-
-- Sentry Mode
-
-- Rotating private BLE scanner address
-
-- Session-scoped pseudonymous device hashes
-
-### CYD DEV Lite Confidence Levels
-#### LOW — 1 to 59
-Low-confidence evidence is primarily a clue, annotation, or reference signal.
-
-LOW does not by itself produce a smart-glasses warning.
-
-#### POSSIBLE — 60 to 96
-Orange warning.
-
-The advertisement matched a configured smart-glasses-related rule strong enough to warrant user attention.
-
-#### HIGH — 97 to 100
-Red warning.
-
-The advertisement matched a configured rule reaching the firmware's HIGH presentation threshold.
-
-A score is a rule-match score.
-
-It should not be interpreted as:
-
-“There is a 97% probability this is smart glasses.”
-
-### CYD Sentry Mode
-Sentry Mode is primarily designed for long-term unattended or lightly attended deployment.
-
-It is particularly useful for:
-
-- Environmental BLE data collection
-
-- Long-duration facility monitoring
-
-- Schools and institutional environments
-
-- Field research
-
-- Baseline building
-
-- Database development
-
-- Signature research
-
-- False-positive refinement
-
-- Understanding BLE activity over time
-
-Sentry is not ESP32 deep sleep.
-
-The detector remains operational while the screen can remain dark and unobtrusive.
-
-The standard configuration waits approximately:
-
-30 minutes
-
-between ordinary measurements.
-
-Each measurement lasts approximately:
-
-10 seconds.
-
-### What Sentry Measures
-Sentry counts unique BLE device identities within the measurement window.
-
-It does not simply count every advertisement.
-
-RSSI and estimated distance do not define the Sentry activity metric.
-
-### Baseline Building
-The activity threshold is based on the greater of:
-
-150% of the existing baseline
-
-Baseline + 5 devices
-
-A sample must be strictly above the threshold to trigger active learning.
-
-### Active Learning
-When significant activity is detected, Sentry enters a fixed:
-
-60-minute ACTIVE learning period
-
-During that period, repeated 10-second BLE windows are collected.
-
-The 60-minute timer is fixed.
-
-Additional activity does not continually restart or extend it.
-
-### Classification Continues
-During Sentry scan periods, normal classification can continue using:
-
-- Smart-glasses rules
-
-- Camera/audio rules
-
-- Known-device rules
-
-- Suspicious/development-device rules
-
-- False-positive handling
-
-- Relevant observation logging can also continue.
-
-### Sentry Privacy
-Sentry does not create permanent identities for nearby devices.
-
-- Current configuration supports up to:
-
-- 100 pseudonymous identities for Sentry session/dashboard statistics
-
-- 400 unique identities within a measurement window
-
-- A Sentry trigger means:
-
-- The BLE environment changed significantly.
-
-- It does not mean:
-
-- A camera, microphone, smart-glasses device, or “spy” entered the area.
-
-### CYD DEV Lite Data Flow
-```text
-                     NEARBY BLE DEVICES
-                            |
-                            v
-                +-------------------------+
-                | BLE ADVERTISEMENTS      |
-                +------------+------------+
-                             |
-                             v
-                +-------------------------+
-                | CYD BLE SCANNER         |
-                |                         |
-                | PRIVATE NRPA            |
-                | random rotation         |
-                | ~12-18 minutes          |
-                +------------+------------+
-                             |
-                             v
-                +-------------------------+
-                | LOCAL DETECTION ENGINE  |
-                |                         |
-                | HIGH / MEDIUM / LOW     |
-                | camera / audio          |
-                | known devices           |
-                | suspicious devices      |
-                | false positives         |
-                +------------+------------+
-                             |
-       +---------------------+----------------------+
-       |                     |                      |
-       v                     v                      v
-+---------------+    +------------------+    +--------------------+
-| TFT / RGB     |    | PRIVACY PROCESS  |    | SENTRY MODE        |
-|               |    |                  |    |                    |
-| LOW           |    | raw MAC          |    | long-term          |
-| POSSIBLE      |    | transient only   |    | data collection    |
-| HIGH          |    |       |          |    |       |            |
-| CAM / AUDIO   |    |       v          |    |       v            |
-+---------------+    | session hash     |    | baseline building  |
-                     +--------+---------+    +---------+----------+
-                              |                        |
-                              +------------+-----------+
-                                           |
-                                           v
-                                +----------------------+
-                                | SD OBSERVATION LOGS  |
-                                |                      |
-                                | observations         |
-                                | detections           |
-                                | manual captures      |
-                                | sessions             |
-                                | session pseudonyms   |
-                                |                      |
-                                | no raw BLE MAC       |
-                                | no persistent device |
-                                | identity             |
-                                +----------------------+
-```
-
-### Manual CYD BLE Context Capture
-CYD DEV Lite can capture:
-
-- 5 observations before
-
-- 5 observations after
-
-- for a total of:
-
-- 10 observations
-
-- This provides context around an event of interest for later database analysis.
-
-The same privacy rules apply.
-
-## Manual Logging for Signature Development and Database Research
-
-The CYD versions include manual logging tools intended specifically for **signature development, confirmation, database building, and research**.
-
-Manual logging allows the user to deliberately capture BLE observations around a device or event of interest so the resulting data can be reviewed later and compared against known signatures.
-
-This is useful for:
-
-- Adding new smart-glasses signatures
-- Adding new camera/audio signatures
-- Confirming suspected device characteristics
-- Comparing repeated observations from the same known product
-- Identifying useful advertised names
-- Recording Company IDs
-- Recording manufacturer data
-- Recording service UUIDs
-- Comparing address types and advertisement behaviour
-- Distinguishing genuine product characteristics from environmental noise
-- Reducing false positives
-- Building known-device annotations
-- Improving HIGH / MEDIUM / LOW rule tables
-- Expanding the camera/audio database
-- Field research and long-term database refinement
-
-### CYD DEV Lite Manual Capture
-
-CYD DEV Lite can capture a short context window around a manually selected event.
-
-The current design records:
-
-- **5 observations before**
-- **5 observations after**
-
-for a total of:
-
-**10 observations**
-
-This helps preserve the BLE context immediately surrounding a device of interest rather than recording only one isolated advertisement.
-
-For example, if a physically confirmed pair of smart glasses is powered on nearby, manual capture can be used to record the surrounding BLE observations and later identify which advertised name, Company ID, manufacturer data, UUIDs, or other fields consistently appeared with that product.
-
-### CYD Expanded DEV Research Use
-
-CYD Expanded DEV is particularly suited to larger-scale signature development and database research.
-
-It combines:
-
-- Local CYD detection rules
-- Manual observation logging
-- SD storage
-- Expanded database lookups
-- Long-duration Sentry collection
-- Stronger practical BLE reception
-- Supplementary database processing on the second ESP32
-
-This makes it useful as the main development platform for discovering, validating, and refining signatures before proven rules are moved into the smaller S3 and WROOM builds.
-
-### Recommended Signature-Confirmation Process
-
-For reliable database additions:
-
-1. Physically confirm the product being tested.
-2. Capture multiple BLE observations with the CYD.
-3. Repeat the capture in more than one session where practical.
-4. Compare advertised name, Company ID, manufacturer data, UUIDs, and other repeatable fields.
-5. Separate stable product characteristics from changing addresses or temporary values.
-6. Check whether the same characteristic appears on unrelated devices.
-7. Classify the evidence as **CONFIRMED**, **DOCUMENTED**, **FIELD DERIVED**, **REFERENCE ONLY**, or **EXPERIMENTAL**.
-8. Add a detection rule only when the evidence is strong enough for the intended confidence level.
-9. Re-test the rule in normal public environments to check for false positives.
-
-### Privacy During Manual Logging
-
-Manual logging follows the same privacy model as the rest of the project.
-
-Observed raw BLE MAC addresses may be used transiently during processing, but they are not intentionally persisted.
-
-Where correlation is needed, the CYD uses a **session-scoped pseudonymous identifier**.
-
-The same physical BLE device should normally receive a different pseudonym in another session.
-
-Manual logs may therefore contain useful historical observations for research while still avoiding a permanent cross-session observed-device identity.
-
-### Research Principle
-
-Manual logging is intended to answer questions such as:
-
-> **Which BLE characteristics repeatedly belong to this physically confirmed device?**
-
-It should not be used to build permanent histories of unknown nearby people or devices.
-
-The goal is **signature research, confirmation, false-positive reduction, and database improvement**.
-## Cameras, Microphones, and Consumer “Bugs”
-
-
-All detector families are intended to notify the user when BLE advertisements resemble known or suspected:
-
-- Cameras
-- Hidden-camera products
-- Microphones
-- Wireless microphones
-- Recording devices
-- Consumer surveillance devices
-- Consumer “bug”-type devices
-
-The database can use combinations of:
-
-- Bluetooth Company IDs
-
-- Advertised names
-
-- Manufacturer data
-
-- Service UUIDs
-
-- Product-specific patterns
-
-- Manufacturer-specific signatures
-
-- Keywords
-
-- Documented manufacturer information
-
-- Field-derived observations
-
-The project has a particular interest in consumer recording and surveillance products commonly available in Australia.
-
-Products such as RØDE microphones may be added where a specific BLE signature has actually been captured and verified.
-
-A specific brand or product should not be described as supported by a firmware release unless its corresponding rule is actually present in that firmware.
-
-A camera/audio alert means:
-
-A nearby BLE advertisement resembles a known or suspected camera, microphone, or recording-device profile.
-
-It does not prove that the device is hidden, active, or recording.
-
-## CYD Expanded DEV
-**STATUS: WORKING / EXPERIMENTAL / MOSTLY UNTESTED**
-
-**CAPABILITY: HIGHEST**
-
-**INTENDED USE: STATIONARY / DEVELOPMENT**
-
-CYD Expanded DEV is the highest-capability version of the current project.
-
-It combines:
-
-- ESP32-2432S028R CYD
-
-- External 8 dBi U.FL / IPEX antenna
-
-- Required 0-ohm RF antenna-selector resistor modification to route the CYD radio to U.FL / IPEX
-
-- SD storage
-
-- Separate ESP32 database coprocessor
-
-- Local CYD rules
-
-- Expanded database architecture
-
-- Asynchronous UART database lookups
-
-- Future/planned Wi-Fi development
-
-Potential authorised environments include:
-
-- Schools
-
-- School IT departments
-
-- Healthcare facilities
-
-- Aged-care facilities
-
-- Front offices
-
-- Reception areas
-
-- Secure facilities
-
-- Correctional facilities
-
-- Controlled-access locations
-
-- Development laboratories
-
-It is intended to provide the greatest practical BLE reception capability of the current builds.
-
-Actual range depends heavily on:
-
-- Target-device transmit power
-
-- Antenna installation
-
-- Walls
-
-- Obstructions
-
-- RF interference
-
-- Building construction
-
-- Antenna orientation
-
-- Local RF conditions
-
-No fixed detection distance should be guaranteed without direct measurement.
-
-### Parts
-- 1 × ESP32-2432S028R CYD with onboard U.FL / IPEX-capable radio hardware
-
-- 1 × CYD case
-
-- 1 × 8 dBi U.FL / IPEX antenna
-
-- 1 × additional ESP32 database coprocessor
-
-- 1 × SD card
-
-- Approximately 30 cm wire
-
-- Solder
-
-- Flux
-
-###  MANDATORY BEFORE USING THE 8 dBi ANTENNA
-> **THE CYD'S 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE CHANGED.**
-
-The resistor must be moved / resoldered from the PCB-antenna position to the U.FL / IPEX position.
-
-The external 8 dBi antenna will not become the selected RF path simply because it is plugged into the U.FL / IPEX socket.
-
-If the 0-ohm selector resistor is left in the PCB-antenna position, the ESP32 radio remains routed to the onboard PCB antenna.
-
-For the CYD Expanded DEV hardware described here, moving this resistor is a required assembly step, not an optional range modification.
-
-Disconnect power before soldering, identify the selector on the exact board revision received, move the 0-ohm resistor to the external-antenna path, inspect for solder bridges, and only then connect/use the 8 dBi antenna.
-
-### Power
-A suitable fixed USB/wall power source is required.
-
-### CYD Expanded External-Antenna Hardware Check
-Before flashing or commissioning CYD Expanded DEV, verify all of the following:
-
-- The CYD actually has an onboard U.FL / IPEX connector.
-
-- The delivered radio-module revision is suitable for external-antenna routing.
-
-- The 0-ohm RF selector resistor has been physically moved / resoldered from the PCB-antenna route to the U.FL / IPEX route.
-
-- The solder work has been inspected for bridges or damage.
-
-- The 8 dBi antenna is connected only after the RF selector has been changed.
-
-If Step 3 has not been completed, the external antenna is not the selected RF path.
-
-## Antenna Compliance — NSW, Australia
-
-Bluetooth and Wi-Fi radio operation in NSW is regulated primarily by ACMA under Australian Commonwealth law. Higher-gain antennas are not automatically illegal, but the complete transmitter and antenna system must remain within applicable power/EIRP and equipment-compliance limits.
-
-The 8 dBi antenna used with CYD Expanded DEV is intended primarily to improve BLE reception. Do not increase ESP32 transmit power or add RF amplifiers without confirming compliance with current ACMA requirements.
-
-It is currently legal and within class limits to use an ebay " 8 dbi antenna" with losses from cable length
-
-This is general technical information, not legal advice.
-
-### Important: CYD Expanded Uses Two Firmware Packages
-#### CYD Expanded DEV — 1 of 2
-Flash to:
-
-ESP32-2432S028R CYD
-
-This is the main:
-
-- BLE scanner
-
-- Local detection engine
-
-- Display
-
-- User interface
-
-- Privacy engine
-
-- Logging system
-
-#### CYD Expanded DEV — 2 of 2
-Flash to:
-
-Separate ESP32 database coprocessor
-
-This is the expanded database-processing half.
-
-```text
-1 OF 2  ----------------->  ESP32-2432S028R CYD
-
-2 OF 2  ----------------->  SEPARATE ESP32
-                             DATABASE COPROCESSOR
-```
-
-Do not reverse them.
-
-### CYD Expanded Programming Requirements
-- Computer
-
-- Arduino IDE
-
-- Arduino-ESP32 3.3.11
-
-- USB data cable for each ESP32
-
-- OTA updating: not used
-
-- CYD Serial Monitor: 115200 baud
-
-- CYD-to-database UART: 460800 baud, 8N1
-
-- Database ESP: classic ESP32 Dev Module
-
-- Database flash target: approximately 4 MB
-
-- No PSRAM required
-
-- Use the build-specific partition configuration supplied with the final firmware
-
-### CYD Expanded Architecture
-```text
-                         NEARBY BLE DEVICE
-                                |
-                                v
-                      +---------------------+
-                      | BLE ADVERTISEMENT   |
-                      +----------+----------+
-                                 |
-                                 v
-             +------------------------------------+
-             | CYD EXPANDED DEV — 1 OF 2         |
-             | ESP32-2432S028R                    |
-             |                                    |
-             | BLE scanning                       |
-             | privacy handling                   |
-             | local rules                        |
-             | UI                                 |
-             | alerts                             |
-             | session hashing                    |
-             | SD observation logging             |
-             +----------------+-------------------+
-                              |
-                 LOCAL RULES REMAIN
-                    AUTHORITATIVE
-                              |
-                +-------------+-------------+
-                |                           |
-                v                           v
-     +----------------------+    +-------------------------+
-     | LOCAL CYD DETECTION  |    | UART DATABASE LOOKUP    |
-     |                      |    |                         |
-     | smart glasses        |    | framed binary protocol  |
-     | camera/audio         |    | CRC integrity check     |
-     | known devices        |    | 460800 baud / 8N1       |
-     | false positives      |    +------------+------------+
-     +----------+-----------+                 |
-                |                             v
-                |              +----------------------------+
-                |              | CYD EXPANDED DEV — 2 OF 2 |
-                |              | ESP32 DATABASE COPROCESSOR |
-                |              |                            |
-                |              | expanded Company IDs       |
-                |              | extended rule tables       |
-                |              | reference information      |
-                |              | classification lookup      |
-                |              +-------------+--------------+
-                |                            |
-                |                      DATABASE RESULT
-                |                            |
-                +---------------+------------+
-                                |
-                                v
-                    +-------------------------+
-                    | CYD FINAL DECISION      |
-                    |                         |
-                    | local CYD rules remain  |
-                    | authoritative           |
-                    | database supplements    |
-                    +------------+------------+
-                                 |
-                    +------------+-------------+
-                    |                          |
-                    v                          v
-          +------------------+       +-----------------------+
-          | TFT / LED ALERT  |       | SESSION / SD          |
-          |                  |       | OBSERVATIONS          |
-          +------------------+       |                       |
-                                     | pseudonymous          |
-                                     | no raw BLE MAC        |
-                                     | no persistent device  |
-                                     | identity              |
-                                     +-----------------------+
-```
-
-The external database is supplementary.
-
-If the database processor becomes unavailable, the CYD continues local BLE scanning and local rule evaluation.
-
-### CYD Expanded UART
-Baud: 460800
-
-Format: 8N1
-
-CYD TX: GPIO 22
-
-CYD RX: GPIO 27
-
-Database ESP RX: GPIO 16
-
-Database ESP TX: GPIO 17
-
-```text
-CYD GPIO22 TX  ---------->  Database ESP GPIO16 RX
-
-CYD GPIO27 RX  <----------  Database ESP GPIO17 TX
-
-CYD GND        -----------  Database ESP GND
-```
-
-The protocol uses framed binary messages and CRC16 integrity checking.
-
-Raw observed BLE addresses may transiently pass through the lookup protocol where required for matching.
-
-They must not be persistently stored as observed-device identities.
-
-### CYD Expanded Busy-Environment Mode
-The Expanded build includes a database-servicing strategy for busy BLE environments.
-
-Current design:
-
-- Rolling 60-second activity window
-
-- Busy mode enters when unique devices are strictly greater than 20 per minute
-
-- Busy mode exits when activity is strictly below 15
-
-- Five-advertisement median RSSI
-
-- Stronger/nearer requests are serviced before weaker/farther requests
-
-- Weaker/farther observations are not discarded
-
-- Local CYD rules continue normally
-
-- Busy mode changes database service order only
-
-- Busy mode does not change local confidence scoring
-
-## Privacy by Design
-Privacy is a core engineering requirement.
-
-The detector does not need access to:
-
-- Contacts
-
-- Photos
-
-- Messages
-
-- User accounts
-
-- Phone location history
-
-- Phone camera
-
-- Phone microphone
-
-The detector itself does not need, do or use:
-
-- A camera
-
-- A microphone
-
-- A companion app
-
-- Wi-Fi for BLE operation
-
-- Cloud processing
-
-## No Persistent Observed-Device Identity
-This is a fundamental project privacy rule.
-
-No observed BLE device is ever intentionally assigned a persistent identity across sessions.
-
-An observed raw BLE MAC address may exist transiently in RAM while an advertisement is processed.
-
-It may be used transiently for:
-
-- Exact-rule matching
-
-- OUI extraction
-
-- Deduplication
-
-- Session correlation
-
-- Producing a session-scoped pseudonym
-
-Raw observed BLE MAC addresses are not intentionally written into persistent operational logs for legal reasons (such as complying with the NSW Device Surveillance Act 2007/ case law and OIAC reccomendations)
-
-Where correlation is useful, a session-scoped value similar to:
-
-MAC-HASH-7A3F91C2D4E5F607
-
-may be used.
-
-The session salt:
-
-- Is randomly generated
-
-- Exists only for that session
-
-- Is not intentionally persisted
-
-- Changes between sessions
-
-The same BLE address should therefore normally receive a different pseudonym in a later session.
-
-Persistent files may contain historical:
-
-- Observations
-
-- Classifications
-
-- Counters
-
-- Session-scoped pseudonyms
-
-That does not make the observed-device identity persistent.
-
-#### Pseudonymisation Is Not Anonymity
-A session-scoped pseudonym is a privacy measure, not a guarantee of complete anonymity.
-
-Other BLE characteristics can sometimes distinguish a device, including:
-
-- Advertised names
-
-- Manufacturer payloads
-
-- Stable payload identifiers
-
-- Service UUID combinations
-
-This limitation should be considered when handling exported data.
-
-## Protecting the Detector's Own BLE Identity
-Where supported, the firmware uses a private scanner-originating BLE address rather than continuously exposing one fixed public address during active scanning.
-
-A fresh private address is generated at a random interval of approximately:
-
-12–18 minutes
-
-Rotation occurs while scanning is idle.
-
-This reduces exposure of a stable scanner identity and makes straightforward tracking using one fixed BLE address more difficult.
-
-It does not make the detector invisible or undetectable.
-
-## What Happens if Private BLE Setup Fails?
-### CYD DEV Lite — Fail Closed
-If the private NRPA cannot be established and verified:
-
-- Active BLE scanning remains blocked
-
-- Firmware retries private-address setup
-
-- It does not silently continue normal active scanning using its public identity
-
-This is deliberate fail-closed behaviour.
-
-### ESP32-S3 / ESP32-WROOM
-Portable builds make privacy problems visible.
-
-Flashing purple: private setup failed and retrying.
-
-Solid purple: clearly indicated public-address fallback where supported.
-
-## Detection Database Development
-The database combines different forms of evidence.
-
-Public documentation uses categories such as:
-
-- CONFIRMED
-
-- DOCUMENTED
-
-- FIELD DERIVED
-
-- REFERENCE ONLY
-
-#### EXPERIMENTAL
-
-### Confirmed / Documented
-Can include:
-
-- Official advertised names
-
-- Confirmed manufacturer fingerprints
-
-- Documented manufacturer information
-
-- Documented service information
-
-- Strong multi-signal combinations
-
-- Physically confirmed observations
-
-### Field Derived
-Part of the database was manually developed and refined through approximately two weeks of BLE signature collection and real-world field testing in Sydney, Australia.
-
-That work has been used to:
-
-- Identify ordinary BLE products
-
-- Reduce false positives
-
-- Identify headphones and speakers
-
-- Identify commercial equipment
-
-- Investigate smart-glasses advertisements
-
-- Examine camera/audio candidates
-
-- Refine known-device annotation
-
-- Test behaviour in busy BLE environments
-
-### Reference Only
-Examples include:
-
-- Bluetooth Company Identifiers
-
-- Service UUID assignments
-
-- Manufacturer reference data
-
-A Company ID identifies an assigned organisation.
-
-It does not prove the physical product type.
-
-### Experimental
-Some rules remain exploratory and may be based on:
-
-- Advertised names
-
-- Product/model names
-
-- Incomplete public information
-
-- User-supplied information
-
-- Unverified BLE characteristics
-
-Experimental rules should not be presented as equivalent to confirmed device fingerprints.
-
-## Known Kmart / Anko Camera Glasses Example
-One documented product-specific example is:
-
-Item: 43700141
-
-Model: JLR-82067
-
-Documented Bluetooth name: Anko43700141
-
-The refined rule uses the exact advertised name as a strong product-specific clue.
-
-An advertised name can potentially be imitated, so it should not be described as cryptographic proof of identity.
-
-## Known Limitations and Blind Spots
-A device may be missed if:
-
-- It does not use BLE
-
-- BLE is disabled
-
-- It is not advertising
-
-- It uses Wi-Fi only
-
-- Its BLE signature is unknown
-
-- Its advertisements change
-
-- Its firmware changes
-
-- It exposes insufficient information
-
-- Its address and payload are heavily randomised
-
-- RF interference prevents reception
-
-- It is outside practical BLE range
-
-- It deliberately imitates another device
-
-- Its signature has not been added
-
-Legitimate equipment such as:
-
-- Cameras
-
-- Microphones
-
-- Dashcams
-
-- Headphones
-
-- Development boards
-
-- Smart-home equipment
-
-may also advertise BLE characteristics overlapping with camera/audio or development-device categories.
-
-This project is an additional privacy-awareness tool.
-
-It is not a guarantee that an area is free from:
-
-- Cameras
-
-- Microphones
-
-- Recording equipment
-
-- Consumer bugs
-
-- Smart glasses
-
-- Advanced covert surveillance equipment
-
 ## Flashing Overview
+
 1. Install Arduino IDE.
 2. Install the correct Espressif ESP32 board package.
-3. Place the .ino and required project files together.
+3. Place the `.ino` and required project files together.
 4. Connect using a USB data cable.
 5. Select the correct board.
 6. Select the correct serial port.
@@ -2147,17 +1675,13 @@ It is not a guarantee that an area is free from:
 14. Confirm expected LED/display behaviour.
 
 ### S3 Flashing Summary
+
 - Arduino-ESP32: 3.3.11
-
 - Serial Monitor: 115200
-
 - Upload: 921600
-
 - Fallback Upload: 460800
-
 - OTA: not used
-
-- Partition: supplied partitions.csv
+- Partition: supplied `partitions.csv`
 
 Expected startup:
 
@@ -2169,24 +1693,16 @@ GREEN
 ```
 
 ### WROOM Flashing Summary
+
 - Board: ESP32 Dev Module
-
 - Arduino-ESP32: 3.3.11
-
 - BLE: Bluedroid
-
 - Upload: 115200
-
 - Serial: 115200
-
 - Flash mode: DIO where applicable
-
 - Partition: normal/default
-
 - OTA: not used
-
 - External library: Adafruit NeoPixel
-
 - No OLED libraries required
 
 Expected startup:
@@ -2199,40 +1715,29 @@ GREEN
 ```
 
 ### CYD DEV Lite Flashing Summary
+
 Target:
 
 - ESP32-2432S028R CYD
-
 - Arduino-ESP32: 3.3.11
-
 - Serial: 115200
-
 - OTA: not used
-
 - SD card recommended/required for normal logging functionality
-
 - Use the released CYD partition configuration
 
 After flashing:
 
 1. TFT initialises.
-
 2. Startup/legal interface appears.
-
 3. Private BLE setup completes.
-
 4. Scanning becomes available.
-
 5. Main interface appears.
-
 6. Check SD status.
-
 7. Use SYS STAT to verify operation.
 
 ### CYD Expanded Flashing Warning
-> **DO NOT FLASH BOTH FIRMWARE HALVES TO THE SAME BOARD.**
 
-EXTERNAL ANTENNA REQUIREMENT: the CYD's 0-ohm RF antenna-selector resistor must be moved / resoldered to the U.FL / IPEX position before the 8 dBi external antenna is used. If the resistor remains in the PCB-antenna position, connecting the 8 dBi antenna does not route the radio through it.
+> **DO NOT FLASH BOTH FIRMWARE HALVES TO THE SAME BOARD.**
 
 ```text
 CYD EXPANDED DEV — 1 OF 2
@@ -2245,46 +1750,8 @@ CYD EXPANDED DEV — 2 OF 2
                  DATABASE COPROCESSOR
 ```
 
-## Updating the Bluetooth Company ID Database
-CYD Expanded DEV 2 of 2 includes:
-
-generate_company_db.py
-
-The script generates:
-
-company_ids_generated.h
-
-### macOS
-```text
-python3 --version
-cd /path/to/ESP32_BLE_DATABASE_COPROCESSOR_v1
-python3 generate_company_db.py
-```
-Using local JSON:
-
-```text
-python3 generate_company_db.py --input company_ids.json
-```
-### Windows
-```text
-py --version
-cd "C:\path\to\ESP32_BLE_DATABASE_COPROCESSOR_v1"
-py generate_company_db.py
-```
-### Linux
-```text
-python3 --version
-cd /path/to/ESP32_BLE_DATABASE_COPROCESSOR_v1
-python3 generate_company_db.py
-```
-After regenerating company_ids_generated.h:
-
-1. Recompile CYD Expanded DEV 2 of 2
-
-2. Reflash the database ESP
-
-The CYD does not need to be reflashed solely because this generated header changed. After WiFi capabilities are added this process might change to auto update the database on know networks.
 ## Troubleshooting Decision Tree
+
 ```text
 DEVICE DOES NOT POWER
         |
@@ -2371,7 +1838,99 @@ CYD EXPANDED DATABASE FAILURE
         +-- Correct firmware on each device?
 ```
 
+## Detection Database Development
+
+The database combines different forms of evidence.
+
+Public documentation uses categories such as:
+
+- **CONFIRMED**
+- **DOCUMENTED**
+- **FIELD DERIVED**
+- **REFERENCE ONLY**
+- **EXPERIMENTAL**
+
+### Confirmed / Documented
+
+Can include:
+
+- Official advertised names
+- Confirmed manufacturer fingerprints
+- Documented manufacturer information
+- Documented service information
+- Strong multi-signal combinations
+- Physically confirmed observations
+
+### Field Derived
+
+Part of the database was manually developed and refined through approximately two weeks of BLE signature collection and real-world field testing in Sydney, Australia.
+
+That work has been used to:
+
+- Identify ordinary BLE products
+- Reduce false positives
+- Identify headphones and speakers
+- Identify commercial equipment
+- Investigate smart-glasses advertisements
+- Examine camera/audio candidates
+- Refine known-device annotation
+- Test behaviour in busy BLE environments
+
+### Reference Only
+
+Examples include:
+
+- Bluetooth Company Identifiers
+- Service UUID assignments
+- Manufacturer reference data
+
+A Company ID identifies an assigned organisation.
+
+It does not prove the physical product type.
+
+### Experimental
+
+Some rules remain exploratory and may be based on:
+
+- Advertised names
+- Product/model names
+- Incomplete public information
+- User-supplied information
+- Unverified BLE characteristics
+
+Experimental rules should not be presented as equivalent to confirmed device fingerprints.
+
+## Database / Reference Sources
+
+The following databases and reference sources were used during development and research:
+
+- Nordic Semiconductor BLE Database
+- Bluetooth SIG BLE database
+- IEEE data
+- Spectacle Database
+- BLE-Payloads lists
+- Fingerbank data
+- Sparrow data
+- Region-specific and environment-specific data collected during Sydney field testing
+
+The project also contains a large locally developed signature/reference dataset, with further classification work planned.
+
+## Known Kmart / Anko Camera Glasses Example
+
+One documented product-specific example is:
+
+```text
+Item: 43700141
+Model: JLR-82067
+Documented Bluetooth name: Anko43700141
+```
+
+The refined rule uses the exact advertised name as a strong product-specific clue.
+
+An advertised name can potentially be imitated, so it should not be described as cryptographic proof of identity.
+
 ## Contributing a New BLE Signature
+
 Suggested submission format:
 
 ```text
@@ -2391,6 +1950,7 @@ Notes:
 Please do not submit another person's captured raw BLE MAC address.
 
 The strongest submissions are:
+
 - Captured from equipment you own
 - Captured from equipment you can positively identify
 - Repeated observations
@@ -2400,35 +1960,41 @@ The strongest submissions are:
 ## Version Maturity
 
 ### WORKING
+
 Reported operational on physical hardware.
 
 ### HARDWARE VALIDATED
-Compiled, flashed, and tested against the intended hardware and major functionality.
+
+Compiled, flashed and tested against the intended hardware and major functionality.
 
 ### EXPERIMENTAL
+
 Development firmware that operates but still requires broader validation.
 
 | Build | Maturity |
 |---|---|
-| **ESP32-S3 Lite v1.1** | **WORKING/ HARDWARE VALIDATED** ** |
-| **ESP32-WROOM v1.1** | **WORKING/ HARDWARE VALIDATED**  |
+| **ESP32-S3 Lite v1.1** | **WORKING / HARDWARE VALIDATED** |
+| **ESP32-WROOM v1.1** | **WORKING / HARDWARE VALIDATED** |
 | **CYD DEV Lite** | **WORKING / HARDWARE VALIDATED** |
 | **CYD Expanded DEV — 1 of 2** | **WORKING / EXPERIMENTAL / MOSTLY UNTESTED** |
 | **CYD Expanded DEV — 2 of 2** | **WORKING / EXPERIMENTAL / MOSTLY UNTESTED** |
 
 ## Real-World Development and Testing
+
 The project has been refined through real-world BLE field testing rather than only simulated data.
 
 Part of the database was developed through approximately two weeks of BLE collection and field testing in Sydney, Australia.
 
 Testing has included:
-- Public transport busses, metros, trains, stations
+
+- Public transport buses, metros, trains and stations
 - Shopping environments
 - Offices
 - Commercial areas
 - High-density BLE environments
 
 ## Future Development Roadmap
+
 Planned development includes:
 
 - Additional verified smart-glasses signatures
@@ -2444,79 +2010,354 @@ Planned development includes:
 - Community-submitted signatures
 - Improved installation documentation
 - Improved troubleshooting documentation
-- Future Wi-Fi scanning with deicated processing for WIFI classification
-- Further development of "fox hunting" behaviour in classification to furture proof changing manufacturer info.
-
-- Migration of proven CYD features into S3/WROOM
+- Future Wi-Fi scanning with dedicated processing for Wi-Fi classification
+- Further development of proximity/"fox hunting" behaviour in classification to help future-proof changing manufacturer information
+- Migration of proven CYD features into S3/WROOM where appropriate
 
 ## Wi-Fi Roadmap
+
 Wi-Fi scanning is planned/experimental for CYD Expanded DEV.
 
 The intended direction is for Wi-Fi observations to supplement BLE evidence rather than replace BLE detection.
 
 Current BLE-only releases should not be described as already providing completed Wi-Fi detection.
 
-## Legal and Responsible Use
-Bluetooth and radio-monitoring laws vary between countries and jurisdictions.
+## Accessibility
 
-Whether a particular use is lawful may depend on:
+> **Smart glasses have legitimate purposes, particularly as accessibility tools.**
 
-- What information is collected
-- How long it is retained
-- Where the detector is deployed
-- Who operates it
-- Purpose of deployment
-- Privacy obligations
-- Workplace policies
-- School policies
-- Healthcare policies
-- Correctional-facility rules
-- Surveillance legislation
+The project is not intended to oppose accessibility technology or technological progress.
 
-Users are responsible for ensuring deployment is lawful and authorised.
-## CYD External-Antenna Safety Reminder
-For CYD DEV Lite and CYD Expanded DEV builds using the external antenna configuration:
-
-> **THE 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE CHANGED.**
-
-The resistor must be moved / resoldered from the onboard PCB-antenna routing position to the U.FL / IPEX routing position.
-
-Connecting an external antenna without changing this resistor does not select the external antenna.
-
-Always disconnect power before soldering and verify the exact board revision and selector position before modification.
-
-## Final Project Principle
-This project is not intended to create fear around Bluetooth devices, cameras, microphones, or smart glasses.
-Its purpose is to give people additional information about the radio environment around them.
-The detector cannot determine another person's intentions.
-It cannot determine whether recording is occurring.
-It cannot prove that a camera is active.
-It cannot prove that a microphone is active.
-It cannot establish that somebody is acting unlawfully.
-It can observe BLE radio characteristics and report when those characteristics resemble known or suspected device profiles.
-> **This project detects radio characteristics, not people. Its purpose is privacy awareness, not surveillance.**
-
+The aim is to support appropriate privacy safeguards, transparency and responsible use while recognising legitimate accessibility applications.
 
 ## Project Development and Proposed Regulation
 
-The Australian Government is proposing measures to restrict or regulate passive data-collection and other privacy-invasive devices.
-Whether I continue developing this project will depend on how quickly meaningful legislation is introduced. I also have other obligations that currently require my attention.
+The Australian Government has considered and proposed measures affecting digital privacy, surveillance, data collection and related powers.
 
-### Possible Wi-Fi Detection
-I am considering adding **Wi-Fi OUI detection**. Because Wi-Fi scanning consumes considerably more power than BLE scanning, this feature would only be practical for stationary or externally powered devices:
+Whether development of this project continues at the same pace may depend on future regulatory changes and the developer's other obligations.
 
-* **CYD DEV Lite**
-* **CYD Expanded DEV**
+This project may therefore become unsupported or only intermittently maintained.
 
-It is not currently planned for the smaller, portable detector builds.
+---
 
-## Accessibility Must Be Protected
+# Full Privacy Information
 
-> **Smart glasses have legitimate purposes, particularly as accessibility tools although equal alternatives are available.**
+## Privacy by Design
 
-I do not want technological progress or improved accessibility to be held back. My position is not that all smart glasses should be banned.
-However, the privacy-invasive capabilities of these devices require appropriate restrictions, safeguards, transparency and accountability. Regulation should control harmful or covert use while protecting legitimate accessibility applications.
-While I was developing these detector devices, amendments affecting several digital laws, policies and police-powers laws were before Parliament. The outcome and timing of these reforms may determine whether continued development of this project remains necessary.
+Privacy is a core engineering requirement of this project.
 
+The detector does not need access to:
 
+- Contacts
+- Photos
+- Messages
+- User accounts
+- Phone location history
+- Phone camera
+- Phone microphone
 
+The detector itself does not require:
+
+- A camera
+- A microphone
+- A companion application
+- Wi-Fi for current BLE operation
+- Cloud processing
+
+## No Persistent Observed-Device Identity
+
+No observed BLE device is intentionally assigned a persistent identity across sessions.
+
+An observed raw BLE MAC address may temporarily exist in RAM while an advertisement is being processed.
+
+It may be used transiently for:
+
+- Exact-rule matching
+- OUI/manufacturer lookup
+- Deduplication
+- Session correlation
+- Creation of a session-scoped pseudonym
+
+Exact observed BLE MAC addresses are not intentionally written into persistent operational logs.
+
+Where correlation is useful, firmware may store a session-scoped pseudonymous value such as:
+
+```text
+MAC-HASH-7A3F91C2D4E5F607
+```
+
+The session salt:
+
+- Is randomly generated
+- Exists only for that session
+- Is not intentionally persisted
+- Changes between sessions
+
+The same observed BLE address should therefore normally receive a different pseudonym in another session.
+
+This allows observations to be compared during a session without deliberately creating a permanent cross-session device identity.
+
+## Persistent Observation Files
+
+Some builds retain observation, diagnostic or detection logs.
+
+These files may contain:
+
+- Observations
+- Classification results
+- Confidence/rule scores
+- Counters
+- Session-scoped pseudonyms
+- Manufacturer information
+- Advertised names
+- Service information
+- RSSI data
+
+A persistent observation record does not mean the observed device itself has been assigned a permanent identity.
+
+## Pseudonymisation Is Not Anonymity
+
+Session hashing reduces retention of exact hardware addresses, but it does not make every field anonymous.
+
+Other BLE advertisement information may still be distinctive, including:
+
+- Advertised names
+- Manufacturer payloads
+- Company IDs
+- Service UUID combinations
+- Product-specific data
+
+Users should consider this when storing, sharing or publishing exported logs.
+
+## Protecting the Detector's Own BLE Identity
+
+Where supported, the detector uses a private scanner-originating BLE address instead of continuously exposing one fixed public identity.
+
+A new private address is generated at a random interval of approximately:
+
+**12–18 minutes**
+
+Rotation occurs while scanning is idle.
+
+This reduces exposure of a stable scanner identity.
+
+It does not make the detector invisible or undetectable.
+
+## Private-Address Failure
+
+### CYD DEV Lite — Fail Closed
+
+If the private NRPA cannot be established and verified:
+
+- Active BLE scanning remains blocked
+- Firmware retries private-address setup
+- It does not silently continue normal active scanning using its public identity
+
+This is deliberate fail-closed behaviour.
+
+### ESP32-S3 Lite / ESP32-WROOM
+
+Portable builds make privacy problems visible.
+
+- **Flashing purple:** private setup failed and is retrying
+- **Solid purple:** clearly indicated public-address fallback where supported
+
+The user should never be given the impression that private mode remains active when it has failed.
+
+## Manual Logging and Research
+
+CYD manual logging is intended for:
+
+- Signature confirmation
+- Database development
+- False-positive investigation
+- Field research
+- Known-device classification
+
+It is not intended to create permanent histories of unknown nearby people or devices.
+
+Where device correlation is needed, the same session-scoped privacy rules apply.
+
+## Handling Exported Logs
+
+Exported data should be treated as potentially sensitive technical observation data.
+
+Even without raw BLE MAC addresses, fields such as advertised names, manufacturer payloads or product-specific signatures may still reveal useful identifying information about devices.
+
+Do not treat pseudonymised logs as automatically anonymous.
+
+---
+
+# Full Legal and Responsible-Use Information
+
+## General Principle
+
+This project observes BLE radio characteristics.
+
+It does not establish:
+
+- Device ownership
+- Human identity
+- Recording activity
+- Camera activity
+- Microphone activity
+- Intent
+- Malicious conduct
+- Illegal conduct
+
+A detection should always be interpreted in context.
+
+## Authorised Deployment
+
+Use in locations such as:
+
+- Schools
+- Childcare facilities
+- Healthcare environments
+- Workplaces
+- Correctional facilities
+- Secure facilities
+- Controlled-access areas
+
+should be authorised and consistent with:
+
+- Applicable law
+- Workplace requirements
+- Organisational policies
+- Privacy obligations
+- Facility procedures
+
+## Radio and Antenna Use — Australia / NSW
+
+Bluetooth and Wi-Fi radio operation in NSW is regulated primarily under Australian Commonwealth radiocommunications rules administered by ACMA.
+
+Higher-gain antennas are not automatically unlawful, but the complete transmitter/antenna configuration must remain within applicable technical, equipment-compliance and EIRP limits.
+
+For this project:
+
+- CYD DEV Lite uses a 3 dBi 2.4 GHz external antenna.
+- CYD Expanded DEV uses an 8 dBi 2.4 GHz external antenna.
+- The higher-gain antenna is intended primarily to improve practical BLE reception.
+- Do not increase ESP32 transmitter power simply because a higher-gain antenna has been installed.
+- Do not add external RF power amplifiers without confirming applicable requirements.
+
+The complete RF configuration, rather than antenna gain alone, determines compliance.
+
+For current Australian requirements, consult ACMA and the applicable Low Interference Potential Devices class-licensing/equipment-compliance material.
+
+## External-Antenna Hardware Modification
+
+For supported CYD external-antenna builds, the 0-ohm RF antenna-selector resistor must be moved from the onboard PCB-antenna path to the U.FL / IPEX path.
+
+This hardware modification can alter the RF configuration of the original development board.
+
+Users supplying, selling or commercially modifying radio equipment may have additional equipment-compliance obligations.
+
+## Surveillance and Privacy Laws
+
+Radio reception, observation logging, workplace monitoring and surveillance laws can differ according to:
+
+- Jurisdiction
+- Deployment location
+- Information collected
+- Data retention
+- Purpose
+- Employment relationship
+- Facility type
+- How collected information is subsequently used
+
+The project should therefore not be described as automatically lawful for every use.
+
+## Not Evidence of Wrongdoing
+
+An alert should never, by itself, be treated as evidence that another person:
+
+- Is recording
+- Is spying
+- Is carrying a prohibited device
+- Has malicious intent
+- Has committed an offence
+
+BLE advertisements can be imitated, altered or shared across legitimate products.
+
+## User Responsibility
+
+Users are responsible for:
+
+- Understanding local laws
+- Obtaining required authorisation
+- Following organisational policy
+- Handling collected observations responsibly
+- Configuring radio equipment appropriately
+- Avoiding unlawful interference
+- Avoiding misuse of detection results
+
+## Legal Disclaimer
+
+This project and its documentation provide technical and privacy-awareness information.
+
+**They do not constitute legal advice.**
+
+If a deployment raises significant legal, workplace, privacy, surveillance or radio-compliance questions, obtain appropriate professional advice before deployment.
+
+---
+
+# Inspiration and Related Projects
+
+The following projects are credited for inspiration:
+
+- `surveillancewatch/ESP-GlassHole` — ESP32 BLE smart-glasses detector project
+- `sh4d0wm45k/glass-detect` — Smart-glasses detection project
+- `colonelpanichacks/flock-you` — ESP32 surveillance-infrastructure detection project
+- `yjeanrenaud/yj_nearbyglasses` — Nearby Glasses project
+- `NullPxl/banrays` — Smart-glasses / anti-recording awareness project
+- `colonelpanichacks/ouispy-detector` — OUI/BLE-oriented detector project
+- `LuxStatera/flock-hunter-cyd-wifi` — CYD/Wi-Fi detector project
+- `haxorthematrix/BLEPTD` — BLE detection/scanning project
+- `RamboRogers/esp32-bluetooth-scanner` — General ESP32 Bluetooth scanner project
+
+---
+
+# Dedication
+
+This project is dedicated to my sister, my mother, E.M., her sister M.B/M., C.C and R.H.
+
+---
+
+# Support and Maintenance
+
+This project is likely to become mostly unsupported or only intermittently maintained.
+
+Please:
+
+- Read the documentation carefully before building
+- Keep local copies of firmware and documentation
+- Record the exact board revision you use
+- Keep the supplied partition files with each firmware version
+- Keep known-working firmware packages
+- Do not assume future updates or direct support will remain available
+- Be prepared to self-maintain the hardware and firmware if development stops
+
+Experimental builds, especially CYD Expanded DEV, should not be treated as fully validated production systems.
+
+---
+
+# Final Project Principle
+
+This project is not intended to create fear around Bluetooth devices, cameras, microphones or smart glasses.
+
+Its purpose is to give people additional information about the radio environment around them.
+
+The detector cannot determine another person's intentions.
+
+It cannot determine whether recording is occurring.
+
+It cannot prove that a camera is active.
+
+It cannot prove that a microphone is active.
+
+It cannot establish that somebody is acting unlawfully.
+
+It can observe BLE radio characteristics and report when those characteristics resemble known or suspected device profiles.
+
+> **This project detects radio characteristics, not people. Its purpose is privacy awareness, not surveillance.**
