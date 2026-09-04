@@ -32,7 +32,9 @@ I used the following databases and reference sources during development and rese
 - BLE-Payloads lists
 - Fingerbank data
 - Sparrow data
-- My own region specific and environmental specific (Sydney -dense populus area) database, consisting of 4000000 SIGs with more to be classified in the future.
+- My own region specific and environmental specific (Sydney -dense populus area) database, consisting of 4000000 SIGs with more to be classified in the future
+
+** It is possible to modify the onboard database for your own purposes but you may cross legal lines or cross into grey areas. Please Please research, get advice, speak to a lawyer in your specific country, state or region to be aware of the laws. I can only suggest that you only use these devices in a lawful manner and only everr in a test environment**
 
 **This project is likely to go mostly unsupported in the future, please read carefully.**
 
