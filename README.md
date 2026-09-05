@@ -673,6 +673,10 @@ The tiny 0-ohm RF selector resistor must be physically moved from the onboard PC
 
 If this resistor is not changed, plugging an external antenna into the IPEX socket does not select that antenna.
 
+### CYD Expanded Antenna Modification
+
+![CYD Expanded antenna modification](images/CYD%20exanded%20antenna%20mod.png)
+
 #### Procedure
 
 1. Disconnect USB and every other power source from the CYD.
