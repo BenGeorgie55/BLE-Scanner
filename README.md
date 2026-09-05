@@ -2020,6 +2020,72 @@ Planned development includes:
 - Further development of proximity/"fox hunting" behaviour in classification to help future-proof changing manufacturer information
 - Migration of proven CYD features into S3/WROOM where appropriate
 
+
+## Control Testing and Log Validation
+
+> **IMPORTANT: The supplied `BLE_Control_Test.ino` control/emulator script is designed to run on an ESP32-S3 development board.**
+>
+> The ESP32-S3 running the control script acts as the **test transmitter**. It is separate from the detector being evaluated.
+>
+> In the current workflow:
+>
+> - **ESP32-S3 + `BLE_Control_Test.ino`** = control / emulator transmitter
+> - **CYD DEV Lite** = detector under test
+> - **CYD Expanded DEV** = detector under test
+>
+> Do not flash the control/emulator sketch onto the CYD detector as part of normal control testing.
+
+Control testing provides a known BLE reference that can be deliberately introduced during testing to confirm that the detector, classification system, logging path, practical RF performance, and installation position are operating as expected.
+
+The supplied `BLE_Control_Test.ino` sketch turns an **ESP32-S3** into a clearly identifiable **negative-control BLE broadcaster**.
+
+Its purpose is to provide a predictable BLE source that can be used to test:
+
+- BLE reception
+- Logging
+- False-positive behaviour
+- Practical detection range
+- Antenna performance
+- Detector placement
+- Detector orientation
+- Antenna orientation
+- Mounting position
+- Environmental RF effects
+- Firmware changes
+- Database changes
+- Overall BLE-to-log operation
+
+The control device identifies itself clearly so that it cannot reasonably be confused with a genuine smart-glasses, camera, microphone, or field observation.
+
+### Required Control Hardware
+
+For the current control-testing setup you need:
+
+- 1 × **ESP32-S3 development board**
+- USB power/data cable
+- `BLE_Control_Test.ino`
+- CYD DEV Lite or CYD Expanded DEV detector
+
+The ESP32-S3 is used only as the deliberate control transmitter during this test.
+
+```text
+ESP32-S3
+running
+BLE_Control_Test.ino
+        |
+        | BLE CONTROL_TEST advertisements
+        v
++-----------------------+
+| DETECTOR UNDER TEST   |
+|                       |
+| CYD DEV Lite          |
+|        OR             |
+| CYD Expanded DEV      |
++-----------------------+
+        |
+        v
+Observation / log validation
+
 ## Wi-Fi Roadmap
 
 Wi-Fi scanning is planned/experimental for CYD Expanded DEV.
