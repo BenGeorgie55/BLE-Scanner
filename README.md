@@ -313,7 +313,7 @@ The ESP32-S3 Lite includes a persistent local log that can be dumped over USB fo
 6. Allow the detector to finish starting.
 7. Type:
 
-```text
+ 
 LOG
 ```
 
@@ -329,7 +329,7 @@ After the dump has finished:
 3. Paste it into a text file.
 4. Save it with a useful filename, for example:
 
-```text
+ 
 S3_LOG_2026-09-02.txt
 ```
 
@@ -367,7 +367,7 @@ Before an observed device is written to the persistent log, the raw address is r
 
 Example:
 
-```text
+ 
 Observed temporarily in RAM:
 AA:BB:CC:12:34:56
 
@@ -379,7 +379,7 @@ The hash uses a session-specific random salt that is not intended to be persiste
 
 This means the same BLE device should normally receive a different stored hash after a restart or new session.
 
-```text
+ 
 SESSION 1
 AA:BB:CC:12:34:56
         |
@@ -408,7 +408,7 @@ Check that:
 - The USB cable supports data
 - The command is typed exactly as:
 
-```text
+ 
 LOG
 ```
 
@@ -418,7 +418,7 @@ Dumping the log with `LOG` does **not** erase the stored history.
 
 ### ESP32-S3 Data Flow
 
-```text
+ 
             NEARBY BLE DEVICE
                    |
                    v
@@ -537,7 +537,7 @@ It does not use an OLED display.
 
 NeoPixel data pin:
 
-```text
+ 
 GPIO 4
 ```
 
@@ -567,7 +567,7 @@ They do not prove recording, ownership, intent, illegality or exact physical dis
 
 ### ESP32-WROOM Data Flow
 
-```text
+ 
             NEARBY BLE DEVICE
                    |
                    v
@@ -713,7 +713,7 @@ A suitable USB-C wall adapter or fixed USB power source is recommended.
 
 Display:
 
-```text
+ 
 ILI9341
 320 × 240
 Landscape
@@ -722,7 +722,7 @@ Rotation 3
 
 TFT:
 
-```text
+ 
 MISO  -> GPIO 12
 MOSI  -> GPIO 13
 SCLK  -> GPIO 14
@@ -734,7 +734,7 @@ BL    -> GPIO 21
 
 RGB LED:
 
-```text
+ 
 GPIO 4
 GPIO 16
 GPIO 17
@@ -742,7 +742,7 @@ GPIO 17
 
 BOOT:
 
-```text
+ 
 GPIO 0
 ```
 
@@ -979,6 +979,96 @@ No fixed detection distance should be guaranteed without direct measurement.
 - Solder
 - Flux
 
+
+  ## Antenna Choice: 3 dBi Omnidirectional vs 8 dBi Directional
+
+For general BLE detection, a **3 dBi omnidirectional antenna is usually the better choice**.
+
+A higher dBi figure does not automatically mean a better detector. Antenna gain describes how strongly an antenna concentrates energy or sensitivity in particular directions. The most useful antenna depends on the area you are trying to cover.
+
+### 3 dBi Omnidirectional Antenna — Recommended for General Detection
+
+A 3 dBi omnidirectional antenna provides broad coverage around the detector.
+
+This makes it well suited to:
+
+- Rooms
+- Offices
+- Reception areas
+- Classrooms
+- Front desks
+- General facility monitoring
+- Portable use
+- Locations where devices may approach from any direction
+
+For general privacy-awareness use, broad surrounding coverage is usually more useful than concentrating reception in one direction.
+
+
+               coverage
+                  ^
+                  |
+            \     |     /
+              \   |   /
+                [CYD]
+              /   |   \
+            /     |     \
+                  |
+                  v
+
+         broad surrounding coverage
+```
+
+### 8 dBi Directional Antenna — Better for a Known Direction
+
+An 8 dBi directional antenna concentrates more of its sensitivity into a narrower area.
+
+This can improve practical reception in the direction the antenna is aimed, but coverage outside that direction is reduced.
+
+It is better suited to:
+
+- Monitoring a doorway
+- Looking down a corridor
+- Covering a known entrance
+- Testing maximum practical range
+- Direction-finding experiments
+- Fixed installations where the direction of interest is known
+
+
+[CYD]  ---------------------------->
+          concentrated coverage
+          toward a target area
+```
+
+### Why the 3 dBi Antenna Is the General Recommendation
+
+For normal detector use, the goal is usually:
+
+> **Detect relevant BLE devices regardless of which direction they approach from.**
+
+For that purpose, the 3 dBi omnidirectional antenna is generally more useful because it provides more even surrounding coverage.
+
+An 8 dBi directional antenna may receive a device more strongly or at a greater distance in its preferred direction, but that benefit comes with a narrower useful coverage area.
+
+| Antenna | Main Advantage | Best Use |
+|---|---|---|
+| **3 dBi omnidirectional** | Broad surrounding coverage | **General detection** |
+| **8 dBi directional** | Greater sensitivity in one selected direction | Corridors, entrances, range testing and directional monitoring |
+
+> **Higher gain does not automatically mean better overall detection. For general use, coverage pattern is usually more important than maximum range in a single direction.**
+
+### Project Recommendation
+
+- **CYD DEV Lite:** 3 dBi omnidirectional antenna recommended for general-purpose detection.
+- **CYD Expanded DEV:** 8 dBi directional antenna useful when longer-range reception or coverage of a specific direction is required.
+
+If the objective is general room or area awareness rather than monitoring a known direction, use the **3 dBi omnidirectional antenna**.
+
+### Important Note
+
+This comparison applies specifically to a **3 dBi omnidirectional antenna versus an 8 dBi directional antenna**.
+
+Not every 8 dBi antenna is directional. Some higher-gain 2.4 GHz antennas are also omnidirectional, but they still produce a different radiation pattern and should be evaluated for the intended installation.
+
 ### Mandatory Before Using the 8 dBi Antenna
 
 > **THE CYD'S 0-OHM RF ANTENNA-SELECTOR RESISTOR MUST BE CHANGED.**
@@ -994,6 +1084,7 @@ For the CYD Expanded DEV hardware described here, moving this resistor is a requ
 ### Power
 
 A suitable fixed USB/wall power source is required.
+
 
 ### CYD Expanded External-Antenna Hardware Check
 
@@ -1032,7 +1123,7 @@ Flash to:
 
 This is the expanded database-processing half.
 
-```text
+ 
 1 OF 2  ----------------->  ESP32-2432S028R CYD
 
 2 OF 2  ----------------->  SEPARATE ESP32
@@ -1059,19 +1150,18 @@ This is the expanded database-processing half.
 
 Baud:
 
-```text
+ 
 460800
 ```
 
 Format:
 
-```text
+ 
 8N1
 ```
 
 Pins:
 
-```text
 CYD TX: GPIO 22
 CYD RX: GPIO 27
 Database ESP RX: GPIO 16
@@ -1080,7 +1170,7 @@ Database ESP TX: GPIO 17
 
 Wiring:
 
-```text
+ 
 CYD GPIO22 TX  ---------->  Database ESP GPIO16 RX
 
 CYD GPIO27 RX  <----------  Database ESP GPIO17 TX
@@ -1114,19 +1204,19 @@ Current design:
 
 CYD Expanded DEV 2 of 2 includes:
 
-```text
+ 
 generate_company_db.py
 ```
 
 The script generates:
 
-```text
+ 
 company_ids_generated.h
 ```
 
 #### macOS
 
-```text
+ 
 python3 --version
 cd /path/to/ESP32_BLE_DATABASE_COPROCESSOR_v1
 python3 generate_company_db.py
@@ -1134,13 +1224,13 @@ python3 generate_company_db.py
 
 Using local JSON:
 
-```text
+ 
 python3 generate_company_db.py --input company_ids.json
 ```
 
 #### Windows
 
-```text
+ 
 py --version
 cd "C:\path\to\ESP32_BLE_DATABASE_COPROCESSOR_v1"
 py generate_company_db.py
@@ -1148,7 +1238,7 @@ py generate_company_db.py
 
 #### Linux
 
-```text
+ 
 python3 --version
 cd /path/to/ESP32_BLE_DATABASE_COPROCESSOR_v1
 python3 generate_company_db.py
@@ -1301,7 +1391,7 @@ The project also looks for BLE evidence associated with wireless microphone and 
 
 Relevant advertised-name clues may include terms such as:
 
-```text
+ 
 Wireless Mic
 Bluetooth Mic
 MIC-
@@ -1542,7 +1632,7 @@ They can also examine characteristics such as:
 
 Example:
 
-```text
+ 
 ADVERTISEMENT 1
 Address: A1:B2:C3:D4:E5:F6
 Name: ExampleGlasses
@@ -1691,7 +1781,7 @@ The ESP32-S3 Lite v1.1 requires no assembly tools.
 
 Expected startup:
 
-```text
+ 
 BLUE
  |
  v
@@ -1713,7 +1803,7 @@ GREEN
 
 Expected startup:
 
-```text
+ 
 BLUE
  |
  v
@@ -1745,7 +1835,7 @@ After flashing:
 
 > **DO NOT FLASH BOTH FIRMWARE HALVES TO THE SAME BOARD.**
 
-```text
+ 
 CYD EXPANDED DEV — 1 OF 2
         |
         +------> ESP32-2432S028R CYD
@@ -1758,7 +1848,7 @@ CYD EXPANDED DEV — 2 OF 2
 
 ## Troubleshooting Decision Tree
 
-```text
+ 
 DEVICE DOES NOT POWER
         |
         +-- Check USB cable
@@ -1925,7 +2015,7 @@ The project also contains a large locally developed signature/reference dataset,
 
 One documented product-specific example is:
 
-```text
+ 
 Item: 43700141
 Model: JLR-82067
 Documented Bluetooth name: Anko43700141
@@ -1939,7 +2029,7 @@ An advertised name can potentially be imitated, so it should not be described as
 
 Suggested submission format:
 
-```text
+ 
 Product:
 Manufacturer:
 Model:
@@ -2068,7 +2158,7 @@ For the current control-testing setup you need:
 
 The ESP32-S3 is used only as the deliberate control transmitter during this test.
 
-```text
+ 
 ESP32-S3
 running
 BLE_Control_Test.ino
@@ -2154,7 +2244,7 @@ Exact observed BLE MAC addresses are not intentionally written into persistent o
 
 Where correlation is useful, firmware may store a session-scoped pseudonymous value such as:
 
-```text
+ 
 MAC-HASH-7A3F91C2D4E5F607
 ```
 
